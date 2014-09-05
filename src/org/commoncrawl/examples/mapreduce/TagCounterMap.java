@@ -19,7 +19,7 @@ public class TagCounterMap {
 		EXCEPTIONS
 	}
 
-	protected static class TagCounterMapper extends Mapper<Text, ArchiveReader, Text, LongWritable> {
+	public static class TagCounterMapper extends Mapper<Text, ArchiveReader, Text, LongWritable> {
 		private Text outKey = new Text();
 		private LongWritable outVal = new LongWritable(1);
 		// The HTML regular expression is case insensitive (?i), avoids closing tags (?!/),
