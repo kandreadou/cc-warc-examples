@@ -5,7 +5,9 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapred.lib.IdentityReducer;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
@@ -14,7 +16,6 @@ import org.apache.hadoop.mapreduce.lib.reduce.LongSumReducer;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Logger;
-import org.commoncrawl.examples.mapreduce.TagCounterMap;
 import org.commoncrawl.warc.WARCFileInputFormat;
 
 /**
@@ -46,7 +47,7 @@ public class LocalImageExtractor extends Configured implements Tool {
         //
         Job job = new Job(conf);
         job.setJarByClass(LocalImageExtractor.class);
-        job.setNumReduceTasks(5);
+        job.setNumReduceTasks(30);
 
         //String inputPath = "data/*.warc.gz";
         //String inputPath = "https://aws-publicdatasets.s3.amazonaws.com/common-crawl/crawl-data/CC-MAIN-2014-23/segments/1404776400583.60/warc/CC-MAIN-20140707234000-00023-ip-10-180-212-248.ec2.internal.warc.gz";
@@ -65,10 +66,10 @@ public class LocalImageExtractor extends Configured implements Tool {
         job.setOutputFormatClass(TextOutputFormat.class);
 
         job.setOutputKeyClass(Text.class);
-        job.setOutputValueClass(LongWritable.class);
+        job.setOutputValueClass(NullWritable.class);
 
-        job.setMapperClass(TagCounterMap.TagCounterMapper.class);
-        job.setReducerClass(LongSumReducer.class);
+        job.setMapperClass(ImageMap.ImageMapper.class);
+        //job.setReducerClass(LongSumReducer.class);
 
         return job.waitForCompletion(true) ? 0 : -1;
     }
