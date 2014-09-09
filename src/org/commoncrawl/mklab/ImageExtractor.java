@@ -18,6 +18,8 @@ import org.commoncrawl.examples.mapreduce.TagCounterMap;
 import org.commoncrawl.examples.mapreduce.WARCTagCounter;
 import org.commoncrawl.warc.WARCFileInputFormat;
 
+import java.text.DateFormat;
+
 /**
  * Created by kandreadou on 9/4/14.
  */

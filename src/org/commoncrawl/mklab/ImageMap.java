@@ -1,9 +1,10 @@
 package org.commoncrawl.mklab;
 
+import com.google.gson.FieldNamingPolicy;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
-import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.log4j.Logger;
@@ -18,10 +19,7 @@ import org.jsoup.select.Elements;
 
 import java.io.File;
 import java.io.IOException;
-import java.text.DateFormat;
 import java.util.Iterator;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * Created by kandreadou on 9/5/14.
@@ -29,6 +27,7 @@ import java.util.regex.Pattern;
 public class ImageMap {
 
     private static final Logger LOG = Logger.getLogger(ImageMap.class);
+
 
     protected static enum MAPPERCOUNTER {
         RECORDS_IN,
@@ -48,36 +47,8 @@ public class ImageMap {
                         // Convenience function that reads the full message into a raw byte array
                         byte[] rawData = IOUtils.toByteArray(r, r.available());
                         String content = new String(rawData);
-                        String body = content.substring(content.indexOf("\r\n\r\n") + 4);
                         Document doc = Jsoup.parse(content);
-
-                        Elements mf = doc.getElementsByTag("img");
-
-                        if (mf.size() > 0) {
-                            for (Element e : mf) {
-                                String src = e.attr("src");
-
-                                if (src != null && !StringUtils.isEmpty(src)) {
-                                    CCImage image = new CCImage();
-                                    image.src = src;
-                                    image.alt = e.attr("alt");
-                                    image.height = e.attr("height");
-                                    image.width = e.attr("width");
-                                    image.pageUrl = r.getHeader().getUrl();
-                                    Element parent = e.parent();
-                                    if (parent != null) {
-                                        String parentText = parent.text();
-                                        if (parentText != null && !StringUtils.isEmpty(parentText)) {
-                                            int limit = parentText.length()>500?500:parentText.length();
-                                            image.parentTxt = parent.text().substring(0, limit);
-                                        }
-
-                                    }
-                                    JSONObject object = new JSONObject(image);
-                                    context.write(new Text(src), new Text(object.toString() + ','));
-                                }
-                            }
-                        }
+                        doc.traverse(new ImageNodeVisitor(context, r.getHeader().getUrl()));
                     }
                 } catch (Exception ex) {
                     LOG.error("Caught Exception", ex);
@@ -118,7 +89,7 @@ public class ImageMap {
                                 if (parent != null) {
                                     String parentText = parent.text();
                                     if (parentText != null && !StringUtils.isEmpty(parentText)) {
-                                        int limit = parentText.length()>500?500:parentText.length();
+                                        int limit = parentText.length() > 500 ? 500 : parentText.length();
                                         image.parentTxt = parent.text().substring(0, limit);
                                     }
 
@@ -130,7 +101,7 @@ public class ImageMap {
                     }
                 }
             } catch (Exception ex) {
-                System.out.println("Caught Exception"+ex);
+                System.out.println("Caught Exception" + ex);
                 //context.getCounter(MAPPERCOUNTER.EXCEPTIONS).increment(1);
             }
         }

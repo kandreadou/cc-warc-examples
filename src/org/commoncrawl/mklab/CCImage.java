@@ -1,62 +1,28 @@
 package org.commoncrawl.mklab;
 
+import com.google.gson.annotations.SerializedName;
+
 /**
  * Created by kandreadou on 9/5/14.
  */
 public class CCImage {
 
+    @SerializedName("src")
     public String src;
+    @SerializedName("alt")
     public String alt;
+    @SerializedName("w")
     public String width;
+    @SerializedName("h")
     public String height;
+    @SerializedName("pageUrl")
     public String pageUrl;
+    @SerializedName("parentTxt")
     public String parentTxt;
+    @SerializedName("domSib")
+    public int domSiblings;
+    @SerializedName("domDepth")
+    public int domDepth;
 
-    public String getSrc() {
-        return src;
-    }
 
-    public void setSrc(String src) {
-        this.src = src;
-    }
-
-    public String getAlt() {
-        return alt;
-    }
-
-    public void setAlt(String alt) {
-        this.alt = alt;
-    }
-
-    public String getWidth() {
-        return width;
-    }
-
-    public void setWidth(String width) {
-        this.width = width;
-    }
-
-    public String getHeight() {
-        return height;
-    }
-
-    public void setHeight(String height) {
-        this.height = height;
-    }
-
-    public String getPageUrl() {
-        return pageUrl;
-    }
-
-    public void setPageUrl(String pageUrl) {
-        this.pageUrl = pageUrl;
-    }
-
-    public String getParentTxt() {
-        return parentTxt;
-    }
-
-    public void setParentTxt(String parentTxt) {
-        this.parentTxt = parentTxt;
-    }
 }
