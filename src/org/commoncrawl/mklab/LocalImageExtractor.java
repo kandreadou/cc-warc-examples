@@ -66,10 +66,10 @@ public class LocalImageExtractor extends Configured implements Tool {
         job.setOutputFormatClass(TextOutputFormat.class);
 
         job.setOutputKeyClass(Text.class);
-        job.setOutputValueClass(NullWritable.class);
+        job.setOutputValueClass(Text.class);
 
         job.setMapperClass(ImageMap.ImageMapper.class);
-        //job.setReducerClass(LongSumReducer.class);
+        job.setReducerClass(ImageReduce.class);
 
         return job.waitForCompletion(true) ? 0 : -1;
     }

@@ -35,7 +35,7 @@ public class ImageMap {
         EXCEPTIONS
     }
 
-    public static class ImageMapper extends Mapper<Text, ArchiveReader, Text, NullWritable> {
+    public static class ImageMapper extends Mapper<Text, ArchiveReader, Text, Text> {
 
         @Override
         public void map(Text key, ArchiveReader value, Context context) throws IOException {
@@ -74,7 +74,7 @@ public class ImageMap {
 
                                     }
                                     JSONObject object = new JSONObject(image);
-                                    context.write(new Text(object.toString() + ','), NullWritable.get());
+                                    context.write(new Text(src), new Text(object.toString() + ','));
                                 }
                             }
                         }
