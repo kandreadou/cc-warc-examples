@@ -19,6 +19,7 @@ import org.jsoup.select.Elements;
 
 import java.io.File;
 import java.io.IOException;
+import java.text.DateFormat;
 import java.util.Iterator;
 
 /**
@@ -27,6 +28,12 @@ import java.util.Iterator;
 public class ImageMap {
 
     private static final Logger LOG = Logger.getLogger(ImageMap.class);
+
+    private static final Gson gson = new GsonBuilder()
+            .setDateFormat(DateFormat.LONG)
+            .setFieldNamingPolicy(FieldNamingPolicy.UPPER_CAMEL_CASE)
+            .setVersion(1.0)
+            .create();
 
 
     protected static enum MAPPERCOUNTER {
@@ -49,6 +56,55 @@ public class ImageMap {
                         String content = new String(rawData);
                         Document doc = Jsoup.parse(content);
                         doc.traverse(new ImageNodeVisitor(context, r.getHeader().getUrl()));
+                    }
+                } catch (Exception ex) {
+                    LOG.error("Caught Exception", ex);
+                    context.getCounter(MAPPERCOUNTER.EXCEPTIONS).increment(1);
+                }
+        }
+    }
+
+    public static class ImageMapperOld extends Mapper<Text, ArchiveReader, Text, Text> {
+
+        @Override
+        public void map(Text key, ArchiveReader value, Context context) throws IOException {
+
+            for (ArchiveRecord r : value)
+                try {
+                    LOG.debug(r.getHeader().getUrl() + " -- " + r.available());
+                    // We're only interested in processing the responses, not requests or metadata
+                    if (r.getHeader().getMimetype().equals("application/http; msgtype=response")) {
+                        // Convenience function that reads the full message into a raw byte array
+                        byte[] rawData = IOUtils.toByteArray(r, r.available());
+                        String content = new String(rawData);
+                        Document doc = Jsoup.parse(content);
+                        Elements mf = doc.getElementsByTag("img");
+
+                        if (mf.size() > 0) {
+                            for (Element e : mf) {
+                                String src = e.attr("src");
+
+                                if (src != null && !StringUtils.isEmpty(src)) {
+                                    CCImage image = new CCImage();
+                                    image.src = src;
+                                    image.alt = e.attr("alt");
+                                    image.height = e.attr("height");
+                                    image.width = e.attr("width");
+                                    image.pageUrl = r.getHeader().getUrl();
+                                    Element parent = e.parent();
+                                    if (parent != null) {
+                                        String parentText = parent.text();
+                                        if (parentText != null && !StringUtils.isEmpty(parentText)) {
+                                            int limit = parentText.length() > 500 ? 500 : parentText.length();
+                                            image.parentTxt = parent.text().substring(0, limit);
+                                        }
+
+                                    }
+                                    context.write(new Text(image.src), new Text(gson.toJson(image)+','));
+                                }
+                            }
+                        }
+
                     }
                 } catch (Exception ex) {
                     LOG.error("Caught Exception", ex);
