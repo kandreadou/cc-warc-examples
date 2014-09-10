@@ -1,4 +1,4 @@
-package org.commoncrawl.mklab;
+package org.commoncrawl.mklab.mapreduce;
 
 import com.google.gson.FieldNamingPolicy;
 import com.google.gson.Gson;
@@ -11,6 +11,8 @@ import org.apache.log4j.Logger;
 import org.archive.io.ArchiveReader;
 import org.archive.io.ArchiveRecord;
 import org.archive.io.warc.WARCReaderFactory;
+import org.commoncrawl.mklab.CCMedia;
+import org.commoncrawl.mklab.MediaNodeVisitor;
 import org.json.JSONObject;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -25,9 +27,9 @@ import java.util.Iterator;
 /**
  * Created by kandreadou on 9/5/14.
  */
-public class ImageMap {
+public class MediaMap {
 
-    private static final Logger LOG = Logger.getLogger(ImageMap.class);
+    private static final Logger LOG = Logger.getLogger(MediaMap.class);
 
     private static final Gson gson = new GsonBuilder()
             .setDateFormat(DateFormat.LONG)
@@ -55,7 +57,7 @@ public class ImageMap {
                         byte[] rawData = IOUtils.toByteArray(r, r.available());
                         String content = new String(rawData);
                         Document doc = Jsoup.parse(content);
-                        doc.traverse(new ImageNodeVisitor(context, r.getHeader().getUrl()));
+                        doc.traverse(new MediaNodeVisitor(context, r.getHeader().getUrl()));
                     }
                 } catch (Exception ex) {
                     LOG.error("Caught Exception", ex);
@@ -85,7 +87,7 @@ public class ImageMap {
                                 String src = e.attr("src");
 
                                 if (src != null && !StringUtils.isEmpty(src)) {
-                                    CCImage image = new CCImage();
+                                    CCMedia image = new CCMedia();
                                     image.src = src;
                                     image.alt = e.attr("alt");
                                     image.height = e.attr("height");
@@ -135,7 +137,7 @@ public class ImageMap {
                             String src = e.attr("src");
 
                             if (src != null && !StringUtils.isEmpty(src)) {
-                                CCImage image = new CCImage();
+                                CCMedia image = new CCMedia();
                                 image.src = src;
                                 image.alt = e.attr("alt");
                                 image.height = e.attr("height");

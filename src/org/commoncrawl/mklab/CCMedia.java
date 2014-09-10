@@ -5,7 +5,7 @@ import com.google.gson.annotations.SerializedName;
 /**
  * Created by kandreadou on 9/5/14.
  */
-public class CCImage {
+public class CCMedia {
 
     @SerializedName("src")
     public String src;
