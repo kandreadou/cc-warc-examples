@@ -4,7 +4,7 @@ import com.google.common.base.Strings;
 import com.google.gson.FieldNamingPolicy;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.log4j.Logger;
@@ -13,7 +13,6 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.nodes.Node;
 import org.jsoup.parser.Tag;
-import org.jsoup.select.Elements;
 import org.jsoup.select.NodeVisitor;
 
 import java.io.IOException;
@@ -27,6 +26,11 @@ public class ImageNodeVisitor implements NodeVisitor {
 
     private static final Logger LOG = Logger.getLogger(ImageNodeVisitor.class);
 
+    private static final String[] VIDEO_SUFFIXES = {"3gp", "avi", "flv", "m4v", "mov", "mp4", "mpg", "mpeg", "swf", "wmv"};
+
+    private static final String[] IMAGE_SUFFIXES = {"jpg", "jpeg", "png", "gif", "bmp"};
+
+    private static final int TEXT_SIZE_LIMIT = 500;
 
     private static final Gson gson = new GsonBuilder()
             .setDateFormat(DateFormat.LONG)
@@ -67,9 +71,9 @@ public class ImageNodeVisitor implements NodeVisitor {
                 // specific for <a> or <link>
                 else if (e.tag() == Tag.valueOf("a") || e.tag() == Tag.valueOf("link")) {
                     String href = e.attr("href");
-                    if (href != null && !StringUtils.isEmpty(href) && (href.endsWith("jpg") || href.endsWith("png") || href.endsWith("gif"))) {
+                    if (!Strings.isNullOrEmpty(href) && isImageUrl(href)) {
                         image.src = href;
-                        image.alt = e.text();
+                        image.alt = reduce(e.text());
                     }
                 }
                 // specific for <video>
@@ -77,27 +81,40 @@ public class ImageNodeVisitor implements NodeVisitor {
                     image.height = e.attr("height");
                     image.width = e.attr("width");
                     image.src = e.attr("src");
-                    image.alt = "####VIDEO### " + e.text();
+                    image.alt = reduce(e.text());
                 }
                 // specific for <video> with multiple <source>
                 else if (e.tag() == Tag.valueOf("source") && e.parent() != null && e.parent().tag() == Tag.valueOf("video")) {
                     Element p = e.parent();
                     image.height = p.attr("height");
                     image.width = p.attr("width");
-                    image.alt = "####VIDEO### " + p.text();
+                    image.alt = reduce(p.text());
                     image.src = e.attr("src");
+                }
+                // specific for <iframe> and <embed>
+                else if (e.tag() == Tag.valueOf("iframe") || e.tag() == Tag.valueOf("embed")) {
+                    image.height = e.attr("height");
+                    image.width = e.attr("width");
+                    image.alt = reduce(e.text());
+                    if (!Strings.isNullOrEmpty(e.attr("src")) && isVideoUrl(e.attr("src")))
+                        image.src = e.attr("src");
+                }
+                // specific for <object>
+                else if (e.tag() == Tag.valueOf("object")){
+                    image.height = e.attr("height");
+                    image.width = e.attr("width");
+                    image.alt = e.attr("name");
+                    if (!Strings.isNullOrEmpty(e.attr("data")) && isVideoUrl(e.attr("data")))
+                        image.src = e.attr("data");
                 }
                 if (!Strings.isNullOrEmpty(image.src)) {
                     image.pageUrl = pageUrl;
                     image.domSiblings = e.siblingElements().size();
                     image.domDepth = depth;
+                    image.domElement = e.tag().getName();
                     Element parent = e.parent();
                     if (parent != null) {
-                        String parentText = parent.text();
-                        if (parentText != null && !StringUtils.isEmpty(parentText)) {
-                            int limit = parentText.length() > 500 ? 500 : parentText.length();
-                            image.parentTxt = parent.text().substring(0, limit);
-                        }
+                        image.parentTxt = reduce(parent.text());
                     }
                     context.write(new Text(image.src), new Text(gson.toJson(image) + ','));
                     //System.out.println(gson.toJson(image));
@@ -108,6 +125,22 @@ public class ImageNodeVisitor implements NodeVisitor {
         } catch (IOException ex) {
             LOG.debug(ex.getMessage(), ex);
         }
+    }
+
+    private static String reduce(String original) {
+        if (!Strings.isNullOrEmpty(original)) {
+            int limit = original.length() > TEXT_SIZE_LIMIT ? TEXT_SIZE_LIMIT : original.length();
+            return original.substring(0, limit);
+        }
+        return null;
+    }
+
+    private static boolean isVideoUrl(String url) {
+        return ArrayUtils.contains(VIDEO_SUFFIXES, url) || url.contains("youtube") || url.contains("vimeo");
+    }
+
+    private static boolean isImageUrl(String url){
+        return ArrayUtils.contains(IMAGE_SUFFIXES, url);
     }
 
     public static void main(String[] args) throws Exception {

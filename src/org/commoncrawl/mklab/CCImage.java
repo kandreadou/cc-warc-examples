@@ -23,6 +23,7 @@ public class CCImage {
     public int domSiblings;
     @SerializedName("domDepth")
     public int domDepth;
-
+    @SerializedName("domElem")
+    public String domElement;
 
 }

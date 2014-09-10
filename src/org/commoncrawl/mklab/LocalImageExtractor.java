@@ -44,7 +44,7 @@ public class LocalImageExtractor extends Configured implements Tool {
         //
         Job job = new Job(conf);
         job.setJarByClass(LocalImageExtractor.class);
-        job.setNumReduceTasks(30);
+        job.setNumReduceTasks(1);
 
         //String inputPath = "data/*.warc.gz";
         //String inputPath = "https://aws-publicdatasets.s3.amazonaws.com/common-crawl/crawl-data/CC-MAIN-2014-23/segments/1404776400583.60/warc/CC-MAIN-20140707234000-00023-ip-10-180-212-248.ec2.internal.warc.gz";
