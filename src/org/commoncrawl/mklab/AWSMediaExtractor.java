@@ -6,6 +6,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.compress.GzipCodec;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
@@ -16,6 +17,8 @@ import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Logger;
 import org.commoncrawl.examples.mapreduce.TagCounterMap;
 import org.commoncrawl.examples.mapreduce.WARCTagCounter;
+import org.commoncrawl.mklab.mapreduce.MediaMap;
+import org.commoncrawl.mklab.mapreduce.MediaReduce;
 import org.commoncrawl.warc.WARCFileInputFormat;
 
 import java.text.DateFormat;
@@ -24,13 +27,13 @@ import java.text.DateFormat;
  * Created by kandreadou on 9/4/14.
  */
 public class AWSMediaExtractor extends Configured implements Tool {
-    private static final Logger LOG = Logger.getLogger(WARCTagCounter.class);
+    private static final Logger LOG = Logger.getLogger(AWSMediaExtractor.class);
 
     /**
      * Main entry point that uses the {@link org.apache.hadoop.util.ToolRunner} class to run the Hadoop job.
      */
     public static void main(String[] args) throws Exception {
-        int res = ToolRunner.run(new Configuration(), new WARCTagCounter(), args);
+        int res = ToolRunner.run(new Configuration(), new AWSMediaExtractor(), args);
         System.exit(res);
     }
 
@@ -60,8 +63,8 @@ public class AWSMediaExtractor extends Configured implements Tool {
         Configuration conf = getConf();
         //
         Job job = new Job(conf);
-        job.setJarByClass(WARCTagCounter.class);
-        job.setNumReduceTasks(1);
+        job.setJarByClass(AWSMediaExtractor.class);
+        job.setNumReduceTasks(30);
 
         //String inputPath = "data/*.warc.gz";
         String inputPath = "s3://aws-publicdatasets/common-crawl/crawl-data/CC-MAIN-2014-23/segments/1404776400583.60/warc/CC-MAIN-20140707234000-00023-ip-10-180-212-248.ec2.internal.warc.gz";
@@ -75,15 +78,17 @@ public class AWSMediaExtractor extends Configured implements Tool {
             fs.delete(new Path(outputPath), true);
         }
         FileOutputFormat.setOutputPath(job, new Path(outputPath));
+        FileOutputFormat.setCompressOutput(job, true);
+        FileOutputFormat.setOutputCompressorClass(job, GzipCodec.class);
 
         job.setInputFormatClass(WARCFileInputFormat.class);
         job.setOutputFormatClass(TextOutputFormat.class);
 
         job.setOutputKeyClass(Text.class);
-        job.setOutputValueClass(LongWritable.class);
+        job.setOutputValueClass(Text.class);
 
-        job.setMapperClass(TagCounterMap.TagCounterMapper.class);
-        job.setReducerClass(LongSumReducer.class);
+        job.setMapperClass(MediaMap.ImageMapper.class);
+        job.setReducerClass(MediaReduce.class);
 
         return job.waitForCompletion(true) ? 0 : -1;
     }
