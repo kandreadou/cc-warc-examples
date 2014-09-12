@@ -83,7 +83,14 @@
 
   <build>
     <sourceDirectory>src</sourceDirectory>
-    
+      <resources>
+          <resource>
+              <directory>resources</directory>
+              <includes>
+                  <include>warc.path</include>
+              </includes>
+          </resource>
+      </resources>
     <plugins>
       <plugin>
 	<groupId>org.apache.maven.plugins</groupId>

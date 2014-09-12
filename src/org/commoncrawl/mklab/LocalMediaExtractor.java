@@ -40,8 +40,9 @@ public class LocalMediaExtractor extends Configured implements Tool {
     public int run(String[] args) throws Exception {
 
         String outputPath = "/output";
-        String inputPath = "/input/*.warc.gz";
-
+        //String inputPath = "/input/*.warc.gz";
+        String inputPath = "/input/CC-MAIN-20140707234000-00023-ip-10-180-212-248.ec2.internal.warc.gz";
+        String inputPath2 = "/input/CC-MAIN-20140707234000-00028-ip-10-180-212-248.ec2.internal.warc.gz";
         Configuration conf = getConf();
         //
         Job job = new Job(conf);
@@ -52,8 +53,10 @@ public class LocalMediaExtractor extends Configured implements Tool {
         //String inputPath = "https://aws-publicdatasets.s3.amazonaws.com/common-crawl/crawl-data/CC-MAIN-2014-23/segments/1404776400583.60/warc/CC-MAIN-20140707234000-00023-ip-10-180-212-248.ec2.internal.warc.gz";
         //inputPath = "s3n://aws-publicdatasets/common-crawl/crawl-data/CC-MAIN-2013-48/segments/1386163035819/wet/CC-MAIN-20131204131715-00000-ip-10-33-133-15.ec2.internal.warc.wet.gz";
         //inputPath = "s3n://aws-publicdatasets/common-crawl/crawl-data/CC-MAIN-2013-48/segments/1386163035819/wet/*.warc.wet.gz";
-        LOG.info("Input path: " + inputPath);
+        //LOG.info("Input path: " + inputPath);
         FileInputFormat.addInputPath(job, new Path(inputPath));
+        FileInputFormat.addInputPath(job, new Path(inputPath2));
+        //FileInputFormat.setInputPaths(job,inputPath);
 
         FileSystem fs = FileSystem.newInstance(conf);
         if (fs.exists(new Path(outputPath))) {
