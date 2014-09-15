@@ -71,7 +71,7 @@ public class AWSMediaExtractor extends Configured implements Tool {
         //
         Job job = new Job(conf);
         job.setJarByClass(AWSMediaExtractor.class);
-        job.setNumReduceTasks(50);
+        job.setNumReduceTasks(40);
 
         /*String start = "s3://aws-publicdatasets/common-crawl/crawl-data/CC-MAIN-2014-23/segments/1404776400583.60/warc/CC-MAIN-20140707234000-0000";
         String end = "-ip-10-180-212-248.ec2.internal.warc.gz";
@@ -82,7 +82,7 @@ public class AWSMediaExtractor extends Configured implements Tool {
                 inputPath += ',';
         }*/
 
-        addPaths(job, 1000);
+        addPaths(job, 101, 1100);
 
         FileSystem fs = FileSystem.get(new URI(outputPath), conf);
         if (fs.exists(new Path(outputPath))) {
@@ -104,14 +104,16 @@ public class AWSMediaExtractor extends Configured implements Tool {
         return job.waitForCompletion(true) ? 0 : -1;
     }
 
-    private void addPaths(Job job, int numPath) {
+    private void addPaths(Job job, int start, int end) {
         try {
             int counter = 0;
             InputStream configStream = getClass().getResourceAsStream("/warc.path");
             Scanner scanner = new Scanner(configStream);
-            while (scanner.hasNextLine() && counter < numPath) {
+            while (scanner.hasNextLine() && counter < end) {
                 counter++;
-                FileInputFormat.addInputPath(job, new Path("s3n://aws-publicdatasets/" + scanner.nextLine()));
+                String line = scanner.nextLine();
+                if (counter >= start)
+                    FileInputFormat.addInputPath(job, new Path("s3n://aws-publicdatasets/" + line));
             }
         } catch (IOException ioe) {
             //ignore

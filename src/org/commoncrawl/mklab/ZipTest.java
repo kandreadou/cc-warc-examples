@@ -9,8 +9,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Enumeration;
 import java.util.Scanner;
 import java.util.zip.GZIPInputStream;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
 
 /**
  * Created by kandreadou on 9/10/14.
@@ -33,22 +36,34 @@ public class ZipTest {
         }
         System.out.println(inputPath);*/
 
-        unZip.addPaths(10);
+        unZip.readFromZipFile("/media/kandreadou/New Volume/1_COMMON_CRAWL/20140915_1133/part-r-00000.gz", 200);
+        //unZip.addPaths(550, 555);
 
     }
 
-    private void addPaths(int numPath) {
+    private void addPaths(int start, int end) {
         int counter = 0;
         InputStream configStream = getClass().getResourceAsStream("/warc.path");
         Scanner scanner = new Scanner(configStream);
-        while (scanner.hasNextLine() && counter < numPath) {
+        while (scanner.hasNextLine() && counter < end) {
             counter++;
-            System.out.println("s3n://aws-publicdatasets/" + scanner.nextLine());
+            String line = scanner.nextLine();
+            if (counter >= start)
+                System.out.println("s3n://aws-publicdatasets/" + line);
             //FileInputFormat.addInputPath(job, new org.apache.hadoop.fs.Path("s3n://aws-publicdatasets/" + scanner.nextLine()));
+
+        }
+    }
+
+    public void readFromZipFile(String file, int numLines) throws IOException {
+        int counter = 0;
+        Scanner scanner = new Scanner(new GZIPInputStream(new FileInputStream(file)));
+        while (scanner.hasNextLine() && counter < numLines) {
+            counter++;
+            System.out.println(scanner.nextLine());
         }
 
     }
-
 
     public void unZipIt(String zipFile, String outputFile) {
 
