@@ -18,6 +18,7 @@ import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Logger;
 import org.commoncrawl.examples.mapreduce.TagCounterMap;
 import org.commoncrawl.examples.mapreduce.WARCTagCounter;
+import org.commoncrawl.mklab.mapreduce.MediaCombine;
 import org.commoncrawl.mklab.mapreduce.MediaMap;
 import org.commoncrawl.mklab.mapreduce.MediaReduce;
 import org.commoncrawl.warc.WARCFileInputFormat;
@@ -67,11 +68,28 @@ public class AWSMediaExtractor extends Configured implements Tool {
             this.getConf().addResource(configFile);
         }
 
+        int start = 50001;
+        int end = 63500;
+        int step = 500;
+        boolean success = true;
+
+        while (start < end) {
+            int intermediate = start+step;
+            if(intermediate>end)
+                intermediate = end;
+            Job job = createJob(outputPath, start, intermediate);
+            start += step;
+            success &= job.waitForCompletion(true);
+        }
+        return success ? 0 : -1;
+    }
+
+    private Job createJob(String outputPath, int start, int end) throws Exception {
+        outputPath += start;
         Configuration conf = getConf();
-        //
         Job job = new Job(conf);
         job.setJarByClass(AWSMediaExtractor.class);
-        job.setNumReduceTasks(40);
+        job.setNumReduceTasks(15);
 
         /*String start = "s3://aws-publicdatasets/common-crawl/crawl-data/CC-MAIN-2014-23/segments/1404776400583.60/warc/CC-MAIN-20140707234000-0000";
         String end = "-ip-10-180-212-248.ec2.internal.warc.gz";
@@ -82,7 +100,7 @@ public class AWSMediaExtractor extends Configured implements Tool {
                 inputPath += ',';
         }*/
 
-        addPaths(job, 101, 1100);
+        addPaths(job, start, end); //1101, 2100
 
         FileSystem fs = FileSystem.get(new URI(outputPath), conf);
         if (fs.exists(new Path(outputPath))) {
@@ -101,7 +119,7 @@ public class AWSMediaExtractor extends Configured implements Tool {
         job.setMapperClass(MediaMap.ImageMapper.class);
         job.setReducerClass(MediaReduce.class);
 
-        return job.waitForCompletion(true) ? 0 : -1;
+        return job;
     }
 
     private void addPaths(Job job, int start, int end) {
