@@ -1,5 +1,7 @@
 package org.commoncrawl.mklab.analysis;
 
+import com.google.common.collect.Multiset;
+import com.google.common.collect.Multisets;
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
 import com.google.gson.stream.JsonReader;
@@ -17,18 +19,64 @@ public class CommonCrawlAnalyzer {
 
     private Gson gson = new Gson();
     private static int JSON_SYNTAX_PROBLEM_COUNT = 0;
-    private static int GLOBAL_COUNT = 0;
+
     private static int NEWS_COUNT = 0;
     private static int DOM_SIB = 0;
     private static int DOM_DEPTH = 0;
-    private static Set<String> STRINGS = new HashSet<String>();
+    public static Set<String> STRINGS = new HashSet<String>();
     DownloadService service = new DownloadService();
+    int count = 0;
 
     public static void main(String[] args) throws Exception {
 
+        long start = System.currentTimeMillis();
         CommonCrawlAnalyzer a = new CommonCrawlAnalyzer();
         a.readDomainsFromFile();
         a.analyzeCommonCrawlLocal();
+
+
+        /*Set<String> set = Statistics.NEWS_IMAGES_FREQUENCIES.elementSet();
+        for (String s : set) {
+            int count = Statistics.NEWS_IMAGES_FREQUENCIES.count(s);
+            System.out.println("Frequency: " + s + " " + count);
+        }
+         System.out.println("WEBPAGES");
+        Set<String> webPagesSet = Statistics.NEWS_WEBPAGES_FREQUENCIES.elementSet();
+        for (String s : webPagesSet) {
+            int count = Statistics.NEWS_WEBPAGES_FREQUENCIES.count(s);
+            System.out.println("Frequency: " + s + " " + count);
+        }
+        */
+
+
+        System.out.println("WEBPAGES");
+        Iterable<Multiset.Entry<String>> webPagesSetSortedByCount =
+                Multisets.copyHighestCountFirst(Statistics.NEWS_WEBPAGES_FREQUENCIES).entrySet();
+        for (Multiset.Entry<String> s : webPagesSetSortedByCount) {
+            System.out.println("Frequency: " + s.getElement() + " " + s.getCount());
+        }
+        System.out.println("IMAGES");
+        Iterable<Multiset.Entry<String>> imageSetSortedByCount =
+                Multisets.copyHighestCountFirst(Statistics.NEWS_IMAGES_FREQUENCIES).entrySet();
+        int newsImageCount = 0;
+        for (Multiset.Entry<String> s : imageSetSortedByCount) {
+            newsImageCount += s.getCount();
+            System.out.println("Frequency: " + s.getElement() + " " + s.getCount());
+        }
+        System.out.println("VIDEOS");
+        Iterable<Multiset.Entry<String>> videoSetSortedByCount =
+                Multisets.copyHighestCountFirst(Statistics.NEWS_VIDEO_FREQUENCIES).entrySet();
+        int newsVideoCount = 0;
+        for (Multiset.Entry<String> s : videoSetSortedByCount) {
+            newsVideoCount += s.getCount();
+            System.out.println("Frequency: " + s.getElement() + " " + s.getCount());
+        }
+
+        long duration = System.currentTimeMillis() - start;
+        System.out.println("UNIQUE URLS: " + Statistics.GLOBAL_COUNT);
+        System.out.println("NEWS IMAGE COUNT: " + newsImageCount);
+        System.out.println("NEWS VIDEO COUNT: " + newsVideoCount);
+        System.out.println("Total time in millis: " + duration);
     }
 
     protected void processLine(String jsonline) {
@@ -37,56 +85,40 @@ public class CommonCrawlAnalyzer {
             reader.setLenient(true);
             B b = gson.fromJson(reader, B.class);
             if (b != null) {
-                GLOBAL_COUNT++;
-                DOM_SIB += b.domSib;
-                DOM_DEPTH += b.domDepth;
                 boolean lineConsumed = false;
                 while (!lineConsumed) {
                     if (service.canAcceptMoreTasks()) {
-                        service.submitTask(b.src);
+                        service.submitTask(b.src, b.pageUrl);
                         lineConsumed = true;
-                    }else{
+                    } else {
                         service.printStatus();
                     }
                     DownloadService.Result r = service.tryGetResult();
                     while (r != null) {
                         //System.out.println("Image url: " + r.url);
-                       // System.out.println("Content length: " + r.contentLength);
+                        // System.out.println("Content length: " + r.contentLength);
                         //System.out.println("Content type: " + r.contentType);
+
+                        /*if (r != null && r.success) {
+
+                            handleURL(r.url, r.pageUrl);
+                        } else {
+                            if (r != null)
+                                System.out.println("Failed " + r.url);
+                        }*/
                         r = service.tryGetResult();
                     }
                 }
-                /*if (isURLRelevant(b.src)) {
-                    NEWS_COUNT++;
-                    System.out.println("New site url found: " + b.src + " " + b.pageUrl);
-                    System.out.println("GLOBAL COUNT: " + GLOBAL_COUNT + " NEWS COUNT " + NEWS_COUNT);
-                    System.out.println("Average dom siblings :" + DOM_SIB / GLOBAL_COUNT);
-                    System.out.println("Average dom depth :" + DOM_DEPTH / GLOBAL_COUNT);
-                }*/
+
             }
         } catch (JsonSyntaxException je) {
             JSON_SYNTAX_PROBLEM_COUNT++;
-            System.out.println(je);
-            System.out.println(jsonline);
-            System.out.println("#NUM EXCEPTIONS "+JSON_SYNTAX_PROBLEM_COUNT);
+            //System.out.println(je);
+            //System.out.println(jsonline);
+            //System.out.println("#NUM EXCEPTIONS "+JSON_SYNTAX_PROBLEM_COUNT);
         }
     }
 
-    protected boolean isURLRelevant(String urlStr) {
-        try {
-            URL url = new URL(urlStr);
-            String host = url.getHost();
-            if (host.startsWith("www.")) {
-                host = host.substring(4);
-            }
-            if (STRINGS.contains(host))
-                return true;
-            return false;
-        } catch (MalformedURLException mue) {
-            //This is not a valid URL. Return false.
-            return false;
-        }
-    }
 
     protected void analyzeCommonCrawlLocal() throws IOException {
         File file = new File("/home/kandreadou/Documents/todo/");
@@ -108,14 +140,12 @@ public class CommonCrawlAnalyzer {
         if (file.getPath().endsWith(".gz")) {
             //processFile(file);
             Scanner scanner = new Scanner(new GZIPInputStream(new FileInputStream(file)), "UTF-8");
-            while (scanner.hasNextLine()) {
+            while (scanner.hasNextLine() && count < 10000000) {
                 String line = scanner.nextLine();
                 processLine(line);
+                count++;
             }
         }
-        System.out.println("GLOBAL COUNT: " + GLOBAL_COUNT + " NES COUNT " + NEWS_COUNT);
-        System.out.println("Average dom siblings :" + DOM_SIB / GLOBAL_COUNT);
-        System.out.println("Average dom depth :" + DOM_DEPTH / GLOBAL_COUNT);
     }
 
     protected void readDomainsFromFile() throws FileNotFoundException {
@@ -129,6 +159,7 @@ public class CommonCrawlAnalyzer {
                 if (host.startsWith("www.")) {
                     host = host.substring(4);
                 }
+                System.out.println("Adding " + host);
                 STRINGS.add(host);
             } catch (MalformedURLException m) {
                 System.out.println("MalformedURLException for " + line + " " + m);
@@ -150,12 +181,8 @@ public class CommonCrawlAnalyzer {
      * @return
      */
     class B {
-        public String src, alt, pageUrl, parentTxt, img;
+        public String src, alt, pageUrl, parentTxt, domElem;
         public int domSib, domDepth;
 
-    }
-
-    class C {
-        public B[] items;
     }
 }
