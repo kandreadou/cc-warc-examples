@@ -93,11 +93,10 @@ public class DownloadService {
         @Override
         public Result call() {
 
+
             normalize();
             process();
-
             return new Result(imageUrl, pageUrl, success);
-
                 /*
                 try {
                     conn = (HttpURLConnection) url.openConnection();
@@ -165,6 +164,7 @@ public class DownloadService {
         }
 
         protected void normalize() {
+
             URL url = null;
             try {
                 url = new URL(imageUrl);
@@ -193,14 +193,14 @@ public class DownloadService {
                         String host = baseUrl.getHost().substring(0, baseUrl.getHost().length());
                         url = new URL(baseUrl.getProtocol() + "://" + host + imageUrl);
                     }
+                    imageUrl = url.toString();
+                    success = true;
                     //System.out.println(url.toString());
                 } catch (Exception e) {
                     System.out.println("Failed to recontruct url " + url + "Exception " + e);
                     success = false;
                 }
             }
-            imageUrl = url.toString();
-            success = true;
         }
     }
 

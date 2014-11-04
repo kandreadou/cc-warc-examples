@@ -25,7 +25,7 @@ public class CommonCrawlAnalyzer {
     private static int DOM_DEPTH = 0;
     public static Set<String> STRINGS = new HashSet<String>();
     DownloadService service = new DownloadService();
-    int count = 0;
+    //int count = 0;
 
     public static void main(String[] args) throws Exception {
 
@@ -74,6 +74,7 @@ public class CommonCrawlAnalyzer {
 
         long duration = System.currentTimeMillis() - start;
         System.out.println("UNIQUE URLS: " + Statistics.GLOBAL_COUNT);
+        System.out.println("UNIQUE DOMAINS: " + Statistics.DOMAIN_COUNT);
         System.out.println("NEWS IMAGE COUNT: " + newsImageCount);
         System.out.println("NEWS VIDEO COUNT: " + newsVideoCount);
         System.out.println("Total time in millis: " + duration);
@@ -140,10 +141,9 @@ public class CommonCrawlAnalyzer {
         if (file.getPath().endsWith(".gz")) {
             //processFile(file);
             Scanner scanner = new Scanner(new GZIPInputStream(new FileInputStream(file)), "UTF-8");
-            while (scanner.hasNextLine() && count < 10000000) {
+            while (scanner.hasNextLine()) {
                 String line = scanner.nextLine();
                 processLine(line);
-                count++;
             }
         }
     }
