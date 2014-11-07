@@ -2,10 +2,12 @@ package org.commoncrawl.mklab.analysis;
 
 import com.google.common.collect.ConcurrentHashMultiset;
 import com.google.common.collect.Multiset;
+import com.google.common.collect.Multisets;
 import com.google.common.hash.BloomFilter;
 import com.google.common.hash.Funnels;
+import gr.forth.ics.memorymeasurer.MemoryMeasurer;
 
-import java.net.URL;
+import java.io.*;
 import java.nio.charset.Charset;
 
 /**
@@ -18,15 +20,7 @@ public class Statistics {
      * Expected number of insertions: 15 billion
      * False positive probability: default 3%
      */
-    public static BloomFilter<String> UNIQUE_URLS;
-
-    static {
-        printMemoryStatistics();
-
-        UNIQUE_URLS = BloomFilter.create(Funnels.stringFunnel(Charset.forName("UTF-8")), 15 * 1000 * 1000 * 1000);
-
-        printMemoryStatistics();
-    }
+    public static BloomFilter<String> UNIQUE_URLS = BloomFilter.create(Funnels.stringFunnel(Charset.forName("UTF-8")), 15 * 1000 * 1000 * 1000);
 
 
     /**
@@ -53,6 +47,7 @@ public class Statistics {
         }
     */
 
+    private static long  start = System.currentTimeMillis();
 
     /**
      * A BloomFilter to store unique domains.
@@ -79,26 +74,72 @@ public class Statistics {
     public static int GLOBAL_COUNT = 0;
     public static int DOMAIN_COUNT = 0;
 
-    public static void printMemoryStatistics() {
-        int mb = 1024 * 1024;
+    public static void printStatistics() {
 
-        //Getting the runtime reference from system
-        Runtime runtime = Runtime.getRuntime();
+        try {
+            PrintWriter writer = new PrintWriter(new BufferedWriter(new FileWriter("/home/kandreadou/Documents/statistics.txt",true)));
 
-        System.out.println("##### Heap utilization statistics [MB] #####");
+            int mb = 1024 * 1024;
 
-        //Print used memory
-        System.out.println("Used Memory:"
-                + (runtime.totalMemory() - runtime.freeMemory()) / mb);
+            //Getting the runtime reference from system
+            Runtime runtime = Runtime.getRuntime();
 
-        //Print free memory
-        System.out.println("Free Memory:"
-                + runtime.freeMemory() / mb);
+            writer.println("##### Heap utilization statistics [MB] #####");
 
-        //Print total available memory
-        System.out.println("Total Memory:" + runtime.totalMemory() / mb);
+            //Print used memory
+            writer.println("Used Memory:"
+                    + (runtime.totalMemory() - runtime.freeMemory()) / mb);
 
-        //Print Maximum available memory
-        System.out.println("Max Memory:" + runtime.maxMemory() / mb);
+            //Print free memory
+            writer.println("Free Memory:"
+                    + runtime.freeMemory() / mb);
+
+            //Print total available memory
+            writer.println("Total Memory:" + runtime.totalMemory() / mb);
+
+            //Print Maximum available memory
+            writer.println("Max Memory:" + runtime.maxMemory() / mb);
+
+            long memory = MemoryMeasurer.count(UNIQUE_URLS);
+
+            writer.println("Bloom filter size:" + memory/mb);
+
+            writer.println("WEBPAGES");
+            Iterable<Multiset.Entry<String>> webPagesSetSortedByCount =
+                    Multisets.copyHighestCountFirst(Statistics.NEWS_WEBPAGES_FREQUENCIES).entrySet();
+            for (Multiset.Entry<String> s : webPagesSetSortedByCount) {
+                writer.println("Frequency: " + s.getElement() + " " + s.getCount());
+            }
+            writer.println("IMAGES");
+            Iterable<Multiset.Entry<String>> imageSetSortedByCount =
+                    Multisets.copyHighestCountFirst(Statistics.NEWS_IMAGES_FREQUENCIES).entrySet();
+            int newsImageCount = 0;
+            for (Multiset.Entry<String> s : imageSetSortedByCount) {
+                newsImageCount += s.getCount();
+                writer.println("Frequency: " + s.getElement() + " " + s.getCount());
+            }
+            writer.println("VIDEOS");
+            Iterable<Multiset.Entry<String>> videoSetSortedByCount =
+                    Multisets.copyHighestCountFirst(Statistics.NEWS_VIDEO_FREQUENCIES).entrySet();
+            int newsVideoCount = 0;
+            for (Multiset.Entry<String> s : videoSetSortedByCount) {
+                newsVideoCount += s.getCount();
+                writer.println("Frequency: " + s.getElement() + " " + s.getCount());
+            }
+
+            long duration = System.currentTimeMillis() - start;
+            writer.println("UNIQUE URLS: " + Statistics.GLOBAL_COUNT);
+            writer.println("UNIQUE DOMAINS: " + Statistics.DOMAIN_COUNT);
+            writer.println("NEWS IMAGE COUNT: " + newsImageCount);
+            writer.println("NEWS VIDEO COUNT: " + newsVideoCount);
+            writer.println("Total time in millis: " + duration / 1000 + " seconds");
+
+            writer.close();
+
+        } catch (FileNotFoundException e) {
+        } catch (UnsupportedEncodingException e) {
+        } catch (IOException e) {
+        }
+
     }
 }

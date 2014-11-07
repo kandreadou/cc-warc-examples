@@ -25,10 +25,10 @@ public class CommonCrawlAnalyzer {
     private static int DOM_DEPTH = 0;
     public static Set<String> STRINGS = new HashSet<String>();
     ProcessingService service = new ProcessingService();
+    static long  start = System.currentTimeMillis();
 
     public static void main(String[] args) throws Exception {
 
-        long start = System.currentTimeMillis();
         CommonCrawlAnalyzer a = new CommonCrawlAnalyzer();
         a.readDomainsFromFile();
         a.analyzeCommonCrawlLocal();
@@ -110,11 +110,15 @@ public class CommonCrawlAnalyzer {
                 }
 
             }
+            reader.close();
+            reader = null;
         } catch (JsonSyntaxException je) {
             JSON_SYNTAX_PROBLEM_COUNT++;
             //System.out.println(je);
             //System.out.println(jsonline);
             //System.out.println("#NUM EXCEPTIONS "+JSON_SYNTAX_PROBLEM_COUNT);
+        } catch (IOException e) {
+
         }
     }
 
@@ -129,8 +133,10 @@ public class CommonCrawlAnalyzer {
 
     protected void readRecursivelyInLocalFolder(File folder) throws IOException {
         for (final File fileEntry : folder.listFiles()) {
-            if (count >= 1000000)
-                return;
+            //if (count >= 1000000)
+              // return;
+            Statistics.printStatistics();
+            System.out.println("Total time: "+(System.currentTimeMillis()-start)/1000);
             if (fileEntry.isDirectory()) {
                 readRecursivelyInLocalFolder(fileEntry);
             } else {
@@ -145,15 +151,17 @@ public class CommonCrawlAnalyzer {
             //processFile(file);
             BufferedReader reader = new BufferedReader(new InputStreamReader(new GZIPInputStream(new FileInputStream(file)), "UTF-8"));
             String line = reader.readLine();
-            while (line != null && count<1000000) {
-                count++;
+            while (line != null ) {
+                //count++;
                 processLine(line);
                 line = reader.readLine();
             }
+            reader.close();
+            reader = null;
         }
     }
 
-    protected void readDomainsFromFile() throws FileNotFoundException {
+    protected void readDomainsFromFile() throws IOException {
         InputStream configStream = new FileInputStream("/home/kandreadou/workspace/bubing-0.9.3/seeds.txt");
         Scanner scanner = new Scanner(configStream);
         while (scanner.hasNextLine()) {
@@ -164,12 +172,14 @@ public class CommonCrawlAnalyzer {
                 if (host.startsWith("www.")) {
                     host = host.substring(4);
                 }
-                System.out.println("Adding " + host);
+                //System.out.println("Adding " + host);
                 STRINGS.add(host);
             } catch (MalformedURLException m) {
                 System.out.println("MalformedURLException for " + line + " " + m);
             }
         }
+        scanner.close();
+        configStream.close();
     }
 
     /**
