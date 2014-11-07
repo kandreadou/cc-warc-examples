@@ -1,23 +1,19 @@
 package org.commoncrawl.mklab.analysis;
 
-import com.google.common.hash.BloomFilter;
 import org.apache.commons.lang.StringUtils;
 
-import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.Arrays;
 import java.util.concurrent.*;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
  * Created by kandreadou on 10/30/14.
  */
-public class DownloadService {
+public class ProcessingService {
 
-    private static final int NUM_DOWNLOAD_THREADS = 1000;
-    private static final int MAX_NUM_PENDING_TASKS = 10 * NUM_DOWNLOAD_THREADS;
+    private static final int NUM_DOWNLOAD_THREADS = 1;
+    private static final int MAX_NUM_PENDING_TASKS = 100 * NUM_DOWNLOAD_THREADS;
     private static final int CONNECTION_TIMEOUT = 2000; // in millis
     private static final int READ_TIMEOUT = 2000; // in millis
     private final ExecutorService executor = Executors.newFixedThreadPool(NUM_DOWNLOAD_THREADS);
@@ -80,90 +76,66 @@ public class DownloadService {
 
     class Download implements Callable<Result> {
 
-        private String imageUrl;
-        private String pageUrl;
-        private boolean success = false;
+        private String imageUrlStr;
+        private String pageUrlStr;
 
         public Download(String imageUrl, String pageUrl) {
-            this.imageUrl = imageUrl.replaceAll("\\s", "");
-            this.pageUrl = pageUrl.replaceAll("\\s", "");
-            //System.out.println("imageUrl "+imageUrl+" pageUrl "+pageUrl);
+            this.imageUrlStr = imageUrl;
+            this.pageUrlStr = pageUrl;
         }
 
         @Override
         public Result call() {
-
-
-            normalize();
-            process();
-            return new Result(imageUrl, pageUrl, success);
-                /*
-                try {
-                    conn = (HttpURLConnection) url.openConnection();
-                    conn.setInstanceFollowRedirects(true);
-                    conn.setConnectTimeout(CONNECTION_TIMEOUT); // TO DO: add retries when connections times out
-                    conn.setReadTimeout(READ_TIMEOUT);
-                    //conn.connect();
-                    //System.out.println("Content length: " + conn.getContentLength() + " Content type: " + conn.getContentType());
-                    success = true;
-                } catch (Exception e) {
-                    System.out.println("Exception at url: " + url);
-                } finally {
-                    Result result;
-                    if (conn != null) {
-                        result = new Result(url.toString(), success, conn.getContentLength(), conn.getContentType());
-                        conn.disconnect();
-                    } else {
-                        result = new Result(imageUrl, false);
-                    }
-                    return result;
-                }
-                */
-        }
-
-        protected void process() {
-            //If the URL is unique
-            boolean isUnique = false;
-            synchronized (Statistics.UNIQUE_URLS) {
-                isUnique = Statistics.UNIQUE_URLS.put(imageUrl);
-            }
-            if (isUnique) {
-                Statistics.GLOBAL_COUNT++;
-                //Handle imageUrl
-                success &= handleHostUrl(imageUrl, false);
-                success &= handleHostUrl(pageUrl, true);
-            }
-        }
-
-        protected boolean handleHostUrl(String url, boolean isWebPage) {
+            URL image = null;
+            URL webpage = null;
             try {
-                boolean isUnique = false;
-                URL page = new URL(url);
-                String pageHost = page.getHost();
-                synchronized (Statistics.UNIQUE_DOMAINS) {
-                    isUnique = Statistics.UNIQUE_DOMAINS.put(pageHost);
+                this.imageUrlStr = imageUrlStr.replaceAll("\\s", "");
+                this.pageUrlStr = pageUrlStr.replaceAll("\\s", "");
+                image = normalize(imageUrlStr, pageUrlStr);
+                webpage = new URL(pageUrlStr);
+                if (image != null) {
+                    boolean isUnique;
+                    synchronized (Statistics.UNIQUE_URLS) {
+                        isUnique = Statistics.UNIQUE_URLS.put(image.toString());
+                    }
+                    if (isUnique) {
+                        Statistics.GLOBAL_COUNT++;
+                        handleHostUrl(image, false);
+                        handleHostUrl(webpage, true);
+                    }
                 }
-                if (isUnique)
-                    Statistics.DOMAIN_COUNT++;
-                if (pageHost.startsWith("www.")) {
-                    pageHost = pageHost.substring(4);
-                }
-                if (CommonCrawlAnalyzer.STRINGS.contains(pageHost)) {
-                    if (isWebPage)
-                        Statistics.NEWS_WEBPAGES_FREQUENCIES.add(pageHost);
-                    else if (isVideo(url))
-                        Statistics.NEWS_VIDEO_FREQUENCIES.add(pageHost);
-                    else
-                        Statistics.NEWS_IMAGES_FREQUENCIES.add(pageHost);
-                }
-                return true;
             } catch (MalformedURLException mue) {
-                System.out.println("handleHostUrl(): " + mue);
-                return false;
+                System.out.println("call(): " + mue);
+            } catch (Exception ex) {
+                System.out.println("call(): " + ex);
+            } finally {
+                return new Result(image, webpage);
             }
         }
 
-        protected void normalize() {
+        protected void handleHostUrl(URL page, boolean isWebPage) {
+
+            boolean isUnique;
+            String pageHost = page.getHost();
+            synchronized (Statistics.UNIQUE_DOMAINS) {
+                isUnique = Statistics.UNIQUE_DOMAINS.put(pageHost);
+            }
+            if (isUnique)
+                Statistics.DOMAIN_COUNT++;
+            if (pageHost.startsWith("www.")) {
+                pageHost = pageHost.substring(4);
+            }
+            if (CommonCrawlAnalyzer.STRINGS.contains(pageHost)) {
+                if (isWebPage)
+                    Statistics.NEWS_WEBPAGES_FREQUENCIES.add(pageHost);
+                else if (isVideo(page.toString()))
+                    Statistics.NEWS_VIDEO_FREQUENCIES.add(pageHost);
+                else
+                    Statistics.NEWS_IMAGES_FREQUENCIES.add(pageHost);
+            }
+        }
+
+        protected URL normalize(String imageUrl, String pageUrl) {
 
             URL url = null;
             try {
@@ -193,14 +165,15 @@ public class DownloadService {
                         String host = baseUrl.getHost().substring(0, baseUrl.getHost().length());
                         url = new URL(baseUrl.getProtocol() + "://" + host + imageUrl);
                     }
-                    imageUrl = url.toString();
-                    success = true;
+                    //imageUrl = url.toString();
+                    //success = true;
                     //System.out.println(url.toString());
                 } catch (Exception e) {
                     System.out.println("Failed to recontruct url " + url + "Exception " + e);
-                    success = false;
+                    //success = false;
                 }
             }
+            return url;
         }
     }
 
@@ -210,25 +183,13 @@ public class DownloadService {
 
 
     public class Result {
-        public String url;
-        public String pageUrl;
-        public boolean success = false;
-        public int contentLength;
-        public String contentType;
+        public URL url;
+        public URL pageUrl;
 
-        public Result(String url, String pageUrl, boolean success) {
+        public Result(URL url, URL pageUrl) {
             this.url = url;
             this.pageUrl = pageUrl;
-            this.success = success;
         }
-
-        public Result(String url, boolean success, int contentLength, String contentType) {
-            this.url = url;
-            this.success = success;
-            this.contentLength = contentLength;
-            this.contentType = contentType;
-        }
-
     }
 
     public static void main(String[] args) {
