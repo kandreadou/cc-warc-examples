@@ -71,8 +71,8 @@ public class Statistics {
      */
     public static Multiset<String> NEWS_WEBPAGES_FREQUENCIES = ConcurrentHashMultiset.create();
 
-    public static int GLOBAL_COUNT = 0;
-    public static int DOMAIN_COUNT = 0;
+    public static long GLOBAL_COUNT = 0;
+    public static long DOMAIN_COUNT = 0;
 
     public static void printStatistics() {
 
@@ -107,7 +107,9 @@ public class Statistics {
             writer.println("WEBPAGES");
             Iterable<Multiset.Entry<String>> webPagesSetSortedByCount =
                     Multisets.copyHighestCountFirst(Statistics.NEWS_WEBPAGES_FREQUENCIES).entrySet();
+            int newsWebPageCount = 0;
             for (Multiset.Entry<String> s : webPagesSetSortedByCount) {
+                newsWebPageCount += s.getCount();
                 writer.println("Frequency: " + s.getElement() + " " + s.getCount());
             }
             writer.println("IMAGES");
@@ -130,6 +132,7 @@ public class Statistics {
             long duration = System.currentTimeMillis() - start;
             writer.println("UNIQUE URLS: " + Statistics.GLOBAL_COUNT);
             writer.println("UNIQUE DOMAINS: " + Statistics.DOMAIN_COUNT);
+            writer.println("NEWS WEB PAGE COUNT: " + newsWebPageCount);
             writer.println("NEWS IMAGE COUNT: " + newsImageCount);
             writer.println("NEWS VIDEO COUNT: " + newsVideoCount);
             writer.println("Total time in millis: " + duration / 1000 + " seconds");

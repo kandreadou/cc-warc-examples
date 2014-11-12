@@ -124,7 +124,8 @@ public class CommonCrawlAnalyzer {
 
 
     protected void analyzeCommonCrawlLocal() throws IOException {
-        File file = new File("/home/kandreadou/Documents/todo/");
+        //File file = new File("/home/kandreadou/Documents/todo/");
+        File file = new File("/home/kandreadou/Music/commoncrawl/");
         readRecursivelyInLocalFolder(file);
         service.shutDown();
     }
