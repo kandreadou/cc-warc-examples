@@ -77,6 +77,7 @@ public class ProcessingService {
     class Download implements Callable<Result> {
 
         private String imageUrl;
+        private String imageHost;
         private String pageUrl;
         private boolean success = false;
 
@@ -136,6 +137,9 @@ public class ProcessingService {
                 boolean isUnique = false;
                 URL page = new URL(url);
                 String pageHost = page.getHost();
+                if(!isWebPage) {
+                    imageHost = pageHost;
+                }
                 synchronized (Statistics.UNIQUE_DOMAINS) {
                     isUnique = Statistics.UNIQUE_DOMAINS.put(pageHost);
                 }
@@ -145,9 +149,10 @@ public class ProcessingService {
                     pageHost = pageHost.substring(4);
                 }
                 if (CommonCrawlAnalyzer.STRINGS.contains(pageHost)) {
-                    if (isWebPage)
+                    if (isWebPage) {
                         Statistics.NEWS_WEBPAGES_FREQUENCIES.add(pageHost);
-                    else if (isVideo(url))
+                        Statistics.addImageUrlForHost(imageHost, pageHost);
+                    } else if (isVideo(url))
                         Statistics.NEWS_VIDEO_FREQUENCIES.add(pageHost);
                     else
                         Statistics.NEWS_IMAGES_FREQUENCIES.add(pageHost);

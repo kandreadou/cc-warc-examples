@@ -9,6 +9,9 @@ import gr.forth.ics.memorymeasurer.MemoryMeasurer;
 
 import java.io.*;
 import java.nio.charset.Charset;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Created by kandreadou on 10/31/14.
@@ -71,8 +74,20 @@ public class Statistics {
      */
     public static Multiset<String> NEWS_WEBPAGES_FREQUENCIES = ConcurrentHashMultiset.create();
 
+    public static Map<String, Multiset<String>> DOMAINS_FOR_IMAGES = new ConcurrentHashMap<String, Multiset<String>>();
+
     public static long GLOBAL_COUNT = 0;
     public static long DOMAIN_COUNT = 0;
+
+    public static void addImageUrlForHost(String imageHost, String pageHost){
+        if(DOMAINS_FOR_IMAGES.containsKey(pageHost)){
+            DOMAINS_FOR_IMAGES.get(pageHost).add(imageHost);
+        }else{
+            Multiset<String> temp = ConcurrentHashMultiset.create();
+            temp.add(imageHost);
+            DOMAINS_FOR_IMAGES.put(pageHost, temp);
+        }
+    }
 
     public static void printStatistics() {
 
@@ -110,23 +125,32 @@ public class Statistics {
             int newsWebPageCount = 0;
             for (Multiset.Entry<String> s : webPagesSetSortedByCount) {
                 newsWebPageCount += s.getCount();
-                writer.println("Frequency: " + s.getElement() + " " + s.getCount());
+                writer.println( s.getElement() + " " + s.getCount());
             }
             writer.println("IMAGES");
             Iterable<Multiset.Entry<String>> imageSetSortedByCount =
-                    Multisets.copyHighestCountFirst(Statistics.NEWS_IMAGES_FREQUENCIES).entrySet();
+                    Multisets.copyHighestCountFirst(NEWS_IMAGES_FREQUENCIES).entrySet();
             int newsImageCount = 0;
             for (Multiset.Entry<String> s : imageSetSortedByCount) {
                 newsImageCount += s.getCount();
-                writer.println("Frequency: " + s.getElement() + " " + s.getCount());
+                writer.println(s.getElement() + " " + s.getCount());
             }
             writer.println("VIDEOS");
             Iterable<Multiset.Entry<String>> videoSetSortedByCount =
-                    Multisets.copyHighestCountFirst(Statistics.NEWS_VIDEO_FREQUENCIES).entrySet();
+                    Multisets.copyHighestCountFirst(NEWS_VIDEO_FREQUENCIES).entrySet();
             int newsVideoCount = 0;
             for (Multiset.Entry<String> s : videoSetSortedByCount) {
                 newsVideoCount += s.getCount();
-                writer.println("Frequency: " + s.getElement() + " " + s.getCount());
+                writer.println(s.getElement() + " " + s.getCount());
+            }
+
+            for (String host: DOMAINS_FOR_IMAGES.keySet()){
+                writer.println("Image url distribution for host: " + host);
+                Iterable<Multiset.Entry<String>> temp =
+                        Multisets.copyHighestCountFirst(DOMAINS_FOR_IMAGES.get(host)).entrySet();
+                for (Multiset.Entry<String> s : temp) {
+                    writer.println(s.getElement() + " " + s.getCount());
+                }
             }
 
             long duration = System.currentTimeMillis() - start;

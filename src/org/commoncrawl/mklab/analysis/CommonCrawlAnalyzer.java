@@ -32,6 +32,7 @@ public class CommonCrawlAnalyzer {
         CommonCrawlAnalyzer a = new CommonCrawlAnalyzer();
         a.readDomainsFromFile();
         a.analyzeCommonCrawlLocal();
+        Statistics.printStatistics();
 
         System.out.println("WEBPAGES");
         Iterable<Multiset.Entry<String>> webPagesSetSortedByCount =
@@ -130,7 +131,7 @@ public class CommonCrawlAnalyzer {
         service.shutDown();
     }
 
-    int count = 0;
+    //int count = 0;
 
     protected void readRecursivelyInLocalFolder(File folder) throws IOException {
         for (final File fileEntry : folder.listFiles()) {
