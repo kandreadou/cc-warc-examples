@@ -9,7 +9,6 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
-import java.security.MessageDigest;
 import java.util.UUID;
 import java.util.concurrent.*;
 import java.util.regex.Pattern;
@@ -21,8 +20,8 @@ public class ProcessingService {
 
     private static final int NUM_DOWNLOAD_THREADS = 10;
     private static final int MAX_NUM_PENDING_TASKS = 10 * NUM_DOWNLOAD_THREADS;
-    private static final int CONNECTION_TIMEOUT = 1500; // in millis
-    private static final int READ_TIMEOUT = 1500; // in millis
+    private static final int CONNECTION_TIMEOUT = 1000; // in millis
+    private static final int READ_TIMEOUT = 1000; // in millis
     private final ExecutorService executor = Executors.newFixedThreadPool(NUM_DOWNLOAD_THREADS);
     private final CompletionService<Result> service = new ExecutorCompletionService<Result>(executor);
     private final ImageDAO dao = new ImageDAO();
@@ -31,8 +30,8 @@ public class ProcessingService {
     private static Pattern youtubePattern = Pattern.compile("https*://www.youtube.com/watch?.*v=([a-zA-Z0-9_\\-]+)(&.+=.+)*");
     private static Pattern vimeoPattern = Pattern.compile("https*://vimeo.com/([0-9]+)/*$");
     private static Pattern dailymotionPattern = Pattern.compile("https*://www.dailymotion.com/video/([A-Za-z0-9]+)_.*$");
-    private final static String DOWNLOAD_FOLDER = "/home/kandreadou/Pictures/asdf/";
-    private static final int MIN_CALL_INTERVAL = 1000;
+    private final static String DOWNLOAD_FOLDER = "/media/kandreadou/New Volume/Pics/";
+    private static final int MIN_CALL_INTERVAL = 250;
 
     private int numPendingTasks;
     private long lastDownLoadCall = 0;
@@ -143,7 +142,7 @@ public class ProcessingService {
                     fos = new FileOutputStream(imageFilename);
                     fos.getChannel().transferFrom(rbc, 0, Long.MAX_VALUE);
                     dao.save(image);
-                    System.out.println(id + "  " + imgurl + " " + conn.getContentType());
+                    //System.out.println(id + "  " + imgurl + " " + conn.getContentType());
                 }
 
             } catch (Exception e) {
@@ -189,6 +188,9 @@ public class ProcessingService {
                         Statistics.NEWS_VIDEO_FREQUENCIES.add(pageHost);
                     } else {
                         Statistics.NEWS_IMAGES_FREQUENCIES.add(pageHost);
+                        if(CommonCrawlAnalyzer.CASES.contains(url)){
+                            Statistics.CASES_FREQUENCIES.add(url);
+                        }
                         long now = System.currentTimeMillis();
                         while (now - lastDownLoadCall < MIN_CALL_INTERVAL) {
                             Thread.sleep(MIN_CALL_INTERVAL);

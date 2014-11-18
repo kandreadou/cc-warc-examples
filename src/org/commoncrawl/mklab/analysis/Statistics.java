@@ -74,6 +74,11 @@ public class Statistics {
      */
     public static Multiset<String> NEWS_WEBPAGES_FREQUENCIES = ConcurrentHashMultiset.create();
 
+    /**
+     * A HashMap to store frequencies for existing cases of repostings
+     */
+    public static Multiset<String> CASES_FREQUENCIES = ConcurrentHashMultiset.create();
+
     public static Map<String, Multiset<String>> DOMAINS_FOR_IMAGES = new ConcurrentHashMap<String, Multiset<String>>();
 
     public static long GLOBAL_COUNT = 0;
@@ -144,14 +149,23 @@ public class Statistics {
                 writer.println(s.getElement() + " " + s.getCount());
             }
 
-            for (String host: DOMAINS_FOR_IMAGES.keySet()){
+            writer.println("CASES");
+            Iterable<Multiset.Entry<String>> cases =
+                    Multisets.copyHighestCountFirst(CASES_FREQUENCIES).entrySet();
+            int casesCount = 0;
+            for (Multiset.Entry<String> s : cases) {
+                casesCount += s.getCount();
+                writer.println(s.getElement() + " " + s.getCount());
+            }
+
+            /*for (String host: DOMAINS_FOR_IMAGES.keySet()){
                 writer.println("Image url distribution for host: " + host);
                 Iterable<Multiset.Entry<String>> temp =
                         Multisets.copyHighestCountFirst(DOMAINS_FOR_IMAGES.get(host)).entrySet();
                 for (Multiset.Entry<String> s : temp) {
                     writer.println(s.getElement() + " " + s.getCount());
                 }
-            }
+            }*/
 
             long duration = System.currentTimeMillis() - start;
             writer.println("UNIQUE URLS: " + Statistics.GLOBAL_COUNT);
@@ -159,6 +173,8 @@ public class Statistics {
             writer.println("NEWS WEB PAGE COUNT: " + newsWebPageCount);
             writer.println("NEWS IMAGE COUNT: " + newsImageCount);
             writer.println("NEWS VIDEO COUNT: " + newsVideoCount);
+            writer.println("CASES COUNT TOTAL: " + casesCount);
+            writer.println("CASES COUNT UNIQUE: " + CASES_FREQUENCIES.size());
             writer.println("Total time in millis: " + duration / 1000 + " seconds");
 
             writer.close();

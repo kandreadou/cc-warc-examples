@@ -24,6 +24,8 @@ public class CommonCrawlAnalyzer {
     private static int DOM_SIB = 0;
     private static int DOM_DEPTH = 0;
     public static Set<String> STRINGS = new HashSet<String>();
+    public static Set<String> CASES = new HashSet<String>();
+
     ProcessingService service = new ProcessingService();
     static long start = System.currentTimeMillis();
 
@@ -128,17 +130,17 @@ public class CommonCrawlAnalyzer {
 
     protected void analyzeCommonCrawlLocal() throws IOException {
         //File file = new File("/home/kandreadou/Documents/todo/");
-        File file = new File("/home/kandreadou/Music/commoncrawl/");
+        File file = new File("/home/kandreadou/Music/commoncrawl/July2014_40001_end/");
         readRecursivelyInLocalFolder(file);
         service.shutDown();
     }
 
-    int count = 0;
+    //int count = 0;
 
     protected void readRecursivelyInLocalFolder(File folder) throws IOException {
         for (final File fileEntry : folder.listFiles()) {
-            if (count >= 1000000)
-                return;
+            //if (count >= 1000000)
+            //return;
             Statistics.printStatistics();
             System.out.println("Total time: " + (System.currentTimeMillis() - start) / 1000);
             if (fileEntry.isDirectory()) {
@@ -155,8 +157,8 @@ public class CommonCrawlAnalyzer {
             //processFile(file);
             BufferedReader reader = new BufferedReader(new InputStreamReader(new GZIPInputStream(new FileInputStream(file)), "UTF-8"));
             String line = reader.readLine();
-            while (line != null && count < 1000000) {
-                count++;
+            while (line != null) {
+                //count++;
                 processLine(line);
                 line = reader.readLine();
             }
@@ -171,6 +173,15 @@ public class CommonCrawlAnalyzer {
         while (scanner.hasNextLine()) {
             String line = scanner.nextLine();
             STRINGS.add(line);
+        }
+        scanner.close();
+        configStream.close();
+
+        configStream = new FileInputStream("/home/kandreadou/Desktop/cases.txt");
+        scanner = new Scanner(configStream);
+        while (scanner.hasNextLine()) {
+            String line = scanner.nextLine();
+            CASES.add(line);
         }
         scanner.close();
         configStream.close();
