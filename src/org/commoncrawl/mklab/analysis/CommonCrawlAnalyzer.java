@@ -25,14 +25,16 @@ public class CommonCrawlAnalyzer {
     private static int DOM_DEPTH = 0;
     public static Set<String> STRINGS = new HashSet<String>();
     ProcessingService service = new ProcessingService();
-    static long  start = System.currentTimeMillis();
+    static long start = System.currentTimeMillis();
 
     public static void main(String[] args) throws Exception {
 
+        MorphiaManager.setup("commoncrawl");
         CommonCrawlAnalyzer a = new CommonCrawlAnalyzer();
         a.readDomainsFromFile();
         a.analyzeCommonCrawlLocal();
         Statistics.printStatistics();
+        MorphiaManager.tearDown();
 
         System.out.println("WEBPAGES");
         Iterable<Multiset.Entry<String>> webPagesSetSortedByCount =
@@ -69,7 +71,7 @@ public class CommonCrawlAnalyzer {
         try {
             JsonReader reader = new JsonReader(new StringReader(jsonline));
             reader.setLenient(true);
-            B b = gson.fromJson(reader, B.class);
+            CrawledImage b = gson.fromJson(reader, CrawledImage.class);
             if (b != null) {
                 URLProcessor p = new URLProcessor(b.src, b.pageUrl);
                 URLProcessor.Result r = p.call();
@@ -83,12 +85,12 @@ public class CommonCrawlAnalyzer {
         try {
             JsonReader reader = new JsonReader(new StringReader(jsonline));
             reader.setLenient(true);
-            B b = gson.fromJson(reader, B.class);
+            CrawledImage b = gson.fromJson(reader, CrawledImage.class);
             if (b != null) {
                 boolean lineConsumed = false;
                 while (!lineConsumed) {
                     if (service.canAcceptMoreTasks()) {
-                        service.submitTask(b.src, b.pageUrl);
+                        service.submitTask(b);
                         lineConsumed = true;
                     } else {
                         service.printStatus();
@@ -131,14 +133,14 @@ public class CommonCrawlAnalyzer {
         service.shutDown();
     }
 
-    //int count = 0;
+    int count = 0;
 
     protected void readRecursivelyInLocalFolder(File folder) throws IOException {
         for (final File fileEntry : folder.listFiles()) {
-            //if (count >= 1000000)
-              // return;
+            if (count >= 1000000)
+                return;
             Statistics.printStatistics();
-            System.out.println("Total time: "+(System.currentTimeMillis()-start)/1000);
+            System.out.println("Total time: " + (System.currentTimeMillis() - start) / 1000);
             if (fileEntry.isDirectory()) {
                 readRecursivelyInLocalFolder(fileEntry);
             } else {
@@ -153,8 +155,8 @@ public class CommonCrawlAnalyzer {
             //processFile(file);
             BufferedReader reader = new BufferedReader(new InputStreamReader(new GZIPInputStream(new FileInputStream(file)), "UTF-8"));
             String line = reader.readLine();
-            while (line != null ) {
-                //count++;
+            while (line != null && count < 1000000) {
+                count++;
                 processLine(line);
                 line = reader.readLine();
             }
@@ -164,42 +166,13 @@ public class CommonCrawlAnalyzer {
     }
 
     protected void readDomainsFromFile() throws IOException {
-        InputStream configStream = new FileInputStream("/home/kandreadou/workspace/bubing-0.9.3/seeds.txt");
+        InputStream configStream = new FileInputStream("/home/kandreadou/Desktop/news_img_domains.txt");
         Scanner scanner = new Scanner(configStream);
         while (scanner.hasNextLine()) {
             String line = scanner.nextLine();
-            try {
-                URL url = new URL(line);
-                String host = url.getHost();
-                if (host.startsWith("www.")) {
-                    host = host.substring(4);
-                }
-                //System.out.println("Adding " + host);
-                STRINGS.add(host);
-            } catch (MalformedURLException m) {
-                System.out.println("MalformedURLException for " + line + " " + m);
-            }
+            STRINGS.add(line);
         }
         scanner.close();
         configStream.close();
-    }
-
-    /**
-     * {"src":"\n\t\t\t\t\t\t\t\thttp://s7ondemand1.scene7.com/is/image/MoosejawMB/10211640x1073912_zm?$thumb150$\n\t\t\t\t\t\t\t\t",
-     * "alt":"ExOfficio Women\u0027s Crossback Diamond Dress",
-     * "w":"",
-     * "h":"",
-     * "pageUrl":"http://www.moosejaw.com/moosejaw/shop/product_Isis-Women-s-Aida-Dress_10227940_10208_10000001_-1_",
-     * "parentTxt":"ExOfficio Women\u0027s Crossback Diamond Dress",
-     * "domSib":4,
-     * "domDepth":23,
-     * "domElem":"img"},
-     *
-     * @return
-     */
-    class B {
-        public String src, alt, pageUrl, parentTxt, domElem;
-        public int domSib, domDepth;
-
     }
 }

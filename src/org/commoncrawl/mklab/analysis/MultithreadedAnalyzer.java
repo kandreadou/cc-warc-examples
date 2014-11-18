@@ -50,12 +50,12 @@ public class MultithreadedAnalyzer {
         try {
             JsonReader reader = new JsonReader(new StringReader(jsonline));
             reader.setLenient(true);
-            B b = gson.fromJson(reader, B.class);
+            CrawledImage b = gson.fromJson(reader, CrawledImage.class);
             if (b != null) {
                 boolean lineConsumed = false;
                 while (!lineConsumed) {
                     if (service.canAcceptMoreTasks()) {
-                        service.submitTask(b.src, b.pageUrl);
+                        service.submitTask(b);
                         lineConsumed = true;
                     } else {
                         service.printStatus();
@@ -199,24 +199,5 @@ public class MultithreadedAnalyzer {
                 System.out.println("MalformedURLException for " + line + " " + m);
             }
         }
-    }
-
-    /**
-     * {"src":"\n\t\t\t\t\t\t\t\thttp://s7ondemand1.scene7.com/is/image/MoosejawMB/10211640x1073912_zm?$thumb150$\n\t\t\t\t\t\t\t\t",
-     * "alt":"ExOfficio Women\u0027s Crossback Diamond Dress",
-     * "w":"",
-     * "h":"",
-     * "pageUrl":"http://www.moosejaw.com/moosejaw/shop/product_Isis-Women-s-Aida-Dress_10227940_10208_10000001_-1_",
-     * "parentTxt":"ExOfficio Women\u0027s Crossback Diamond Dress",
-     * "domSib":4,
-     * "domDepth":23,
-     * "domElem":"img"},
-     *
-     * @return
-     */
-    class B {
-        public String src, alt, pageUrl, parentTxt, domElem;
-        public int domSib, domDepth;
-
     }
 }
