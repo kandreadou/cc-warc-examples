@@ -46,10 +46,12 @@ public class ProcessingService {
 
     public Result tryGetResult() {
         try {
-            numPendingTasks--;
+
             Future<Result> future = service.poll();
-            if (future != null)
+            if (future != null) {
+                numPendingTasks--;
                 return future.get();
+            }
             return null;
         } catch (Exception e) {
             System.out.println("Exception in getResultWait: " + e);
@@ -119,6 +121,7 @@ public class ProcessingService {
                 success &= handleHostUrl(imageUrl, false);
                 success &= handleHostUrl(pageUrl, true);
             }
+            //printStatus();
         }
 
         protected void download(URL imgurl) {
@@ -152,12 +155,18 @@ public class ProcessingService {
             } finally {
                 lastDownLoadCall = System.currentTimeMillis();
                 try {
-                    if (fos != null)
+                    if (fos != null) {
                         fos.close();
-                    if (rbc != null)
+                        fos = null;
+                    }
+                    if (rbc != null) {
                         rbc.close();
-                    if (conn != null)
+                        rbc = null;
+                    }
+                    if (conn != null) {
                         conn.disconnect();
+                        conn = null;
+                    }
                 } catch (Exception ex) {
                     //ignore
                 }

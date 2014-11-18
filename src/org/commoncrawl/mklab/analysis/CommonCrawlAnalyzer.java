@@ -94,9 +94,10 @@ public class CommonCrawlAnalyzer {
                     if (service.canAcceptMoreTasks()) {
                         service.submitTask(b);
                         lineConsumed = true;
-                    } else {
-                        service.printStatus();
                     }
+                    /*else {
+                        service.printStatus();
+                    }*/
                     ProcessingService.Result r = service.tryGetResult();
                     while (r != null) {
                         //System.out.println("Image url: " + r.url);
