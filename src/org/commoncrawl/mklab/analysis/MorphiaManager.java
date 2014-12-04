@@ -54,4 +54,10 @@ public class MorphiaManager {
             throw new RuntimeException("MorphiaManager has not been properly initialized. Call setup");
         return db;
     }
+
+    public static Datastore getDatastore(){
+        if (ds == null)
+            throw new RuntimeException("MorphiaManager has not been properly initialized. Call setup");
+        return ds;
+    }
 }

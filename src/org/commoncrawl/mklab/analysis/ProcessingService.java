@@ -139,19 +139,22 @@ public class ProcessingService {
                 if (ct != null && ct.startsWith("image")) {
                     UUID id = UUID.nameUUIDFromBytes(imgurl.toString().getBytes());
                     image.id = id.toString();
-                    String fileExtension = ct.substring(ct.indexOf('/')+1);
-                    imageFilename = DOWNLOAD_FOLDER + id + "." + fileExtension;
-                    rbc = Channels.newChannel(conn.getInputStream());
-                    fos = new FileOutputStream(imageFilename);
-                    fos.getChannel().transferFrom(rbc, 0, Long.MAX_VALUE);
-                    dao.save(image);
+                    if (!dao.exists("_id", id.toString())) {
+                        String fileExtension = ct.substring(ct.indexOf('/') + 1);
+                        imageFilename = DOWNLOAD_FOLDER + id + "." + fileExtension;
+                        rbc = Channels.newChannel(conn.getInputStream());
+                        fos = new FileOutputStream(imageFilename);
+                        fos.getChannel().transferFrom(rbc, 0, Long.MAX_VALUE);
+                        dao.save(image);
+                    }
                     //System.out.println(id + "  " + imgurl + " " + conn.getContentType());
                 }
 
             } catch (Exception e) {
                 System.out.println("Exception at url: " + imgurl + e);
                 File imageFile = new File(imageFilename);
-                imageFile.delete();
+                if (imageFile.exists())
+                    imageFile.delete();
             } finally {
                 lastDownLoadCall = System.currentTimeMillis();
                 try {
@@ -197,7 +200,7 @@ public class ProcessingService {
                         Statistics.NEWS_VIDEO_FREQUENCIES.add(pageHost);
                     } else {
                         Statistics.NEWS_IMAGES_FREQUENCIES.add(pageHost);
-                        if(CommonCrawlAnalyzer.CASES.contains(url)){
+                        if (CommonCrawlAnalyzer.CASES.contains(url)) {
                             Statistics.CASES_FREQUENCIES.add(url);
                         }
                         long now = System.currentTimeMillis();

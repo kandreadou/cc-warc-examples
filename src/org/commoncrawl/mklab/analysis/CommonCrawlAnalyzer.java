@@ -131,7 +131,7 @@ public class CommonCrawlAnalyzer {
 
     protected void analyzeCommonCrawlLocal() throws IOException {
         //File file = new File("/home/kandreadou/Documents/todo/");
-        File file = new File("/home/kandreadou/Music/commoncrawl/July2014_40001_end/");
+        File file = new File("/home/kandreadou/Music/commoncrawl/July2014_0_100/");
         readRecursivelyInLocalFolder(file);
         service.shutDown();
     }
