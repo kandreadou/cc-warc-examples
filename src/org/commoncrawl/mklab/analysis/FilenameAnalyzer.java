@@ -26,7 +26,7 @@ public class FilenameAnalyzer {
     private final static int START = 500001;
     private final static int END = 1000001;
 
-    private final static String DOWNLOAD_FOLDER = "/media/kandreadou/New Volume/Pics/";
+    public final static String DOWNLOAD_FOLDER = "/media/kandreadou/New Volume/Pics/";
     private final ImageDAO dao = new ImageDAO();
 
     private final void dostuff() throws IOException {
