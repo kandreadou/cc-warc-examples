@@ -27,4 +27,5 @@ public class CrawledImage {
     public String normalizedSrc;
     public String alt, pageUrl, parentTxt, domElem;
     public int domSib, domDepth;
+    public String filename;
 }

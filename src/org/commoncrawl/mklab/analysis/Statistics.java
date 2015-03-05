@@ -5,7 +5,7 @@ import com.google.common.collect.Multiset;
 import com.google.common.collect.Multisets;
 import com.google.common.hash.BloomFilter;
 import com.google.common.hash.Funnels;
-import gr.forth.ics.memorymeasurer.MemoryMeasurer;
+//import gr.forth.ics.memorymeasurer.MemoryMeasurer;
 
 import java.io.*;
 import java.nio.charset.Charset;
@@ -120,9 +120,9 @@ public class Statistics {
             //Print Maximum available memory
             writer.println("Max Memory:" + runtime.maxMemory() / mb);
 
-            long memory = MemoryMeasurer.count(UNIQUE_URLS);
+            //long memory = MemoryMeasurer.count(UNIQUE_URLS);
 
-            writer.println("Bloom filter size:" + memory/mb);
+            //writer.println("Bloom filter size:" + memory/mb);
 
             writer.println("WEBPAGES");
             Iterable<Multiset.Entry<String>> webPagesSetSortedByCount =

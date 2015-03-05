@@ -31,14 +31,24 @@ public class CommonCrawlAnalyzer {
 
     public static void main(String[] args) throws Exception {
 
-        MorphiaManager.setup("commoncrawl");
+
+        MorphiaManager.setup("commoncrawl2");
         CommonCrawlAnalyzer a = new CommonCrawlAnalyzer();
         a.readDomainsFromFile();
+        long start = System.currentTimeMillis();
         a.analyzeCommonCrawlLocal();
         Statistics.printStatistics();
         MorphiaManager.tearDown();
 
-        System.out.println("WEBPAGES");
+        System.out.println("Counter "+ImageVectorization.counter);
+        System.out.println("SCALING " + ImageVectorization.SCALING / ImageVectorization.counter);
+        System.out.println("FEATURES " + ImageVectorization.FEATURE_EXTRACTION / ImageVectorization.counter);
+        System.out.println("CLASSIFY " + ImageVectorization.CLASSIFY / ImageVectorization.counter);
+        System.out.println("VLAD & PCA " + ImageVectorization.VALD_PCA / ImageVectorization.counter);
+        System.out.println("INDEX " + IndexingManage.INDEXING / ImageVectorization.counter);
+        System.out.print("Duration "+ ((System.currentTimeMillis()-start)/1000)+" seconds");
+        System.out.println("Total pure time "+ImageVectorization.TOTAL_TIME/1000);
+        /*System.out.println("WEBPAGES");
         Iterable<Multiset.Entry<String>> webPagesSetSortedByCount =
                 Multisets.copyHighestCountFirst(Statistics.NEWS_WEBPAGES_FREQUENCIES).entrySet();
         for (Multiset.Entry<String> s : webPagesSetSortedByCount) {
@@ -66,7 +76,7 @@ public class CommonCrawlAnalyzer {
         System.out.println("UNIQUE DOMAINS: " + Statistics.DOMAIN_COUNT);
         System.out.println("NEWS IMAGE COUNT: " + newsImageCount);
         System.out.println("NEWS VIDEO COUNT: " + newsVideoCount);
-        System.out.println("Total time in millis: " + duration / 1000 + " seconds");
+        System.out.println("Total time in millis: " + duration / 1000 + " seconds");*/
     }
 
     protected void processLineSync(String jsonline) {
@@ -131,17 +141,17 @@ public class CommonCrawlAnalyzer {
 
     protected void analyzeCommonCrawlLocal() throws IOException {
         //File file = new File("/home/kandreadou/Documents/todo/");
-        File file = new File("/home/kandreadou/Music/commoncrawl/July2014_0_100/");
+        File file = new File("/home/kandreadou/Music/commoncrawl/July2014_3101_10000/output9701/");
         readRecursivelyInLocalFolder(file);
         service.shutDown();
     }
 
-    //int count = 0;
+    //int numMax = 20000;
 
     protected void readRecursivelyInLocalFolder(File folder) throws IOException {
         for (final File fileEntry : folder.listFiles()) {
-            //if (count >= 1000000)
-            //return;
+            //if (ImageVectorization.counter >= numMax)
+                //return;
             Statistics.printStatistics();
             System.out.println("Total time: " + (System.currentTimeMillis() - start) / 1000);
             if (fileEntry.isDirectory()) {
@@ -158,8 +168,7 @@ public class CommonCrawlAnalyzer {
             //processFile(file);
             BufferedReader reader = new BufferedReader(new InputStreamReader(new GZIPInputStream(new FileInputStream(file)), "UTF-8"));
             String line = reader.readLine();
-            while (line != null) {
-                //count++;
+            while (line != null){ //&& ImageVectorization.counter<numMax) {
                 processLine(line);
                 line = reader.readLine();
             }

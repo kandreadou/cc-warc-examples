@@ -1,8 +1,5 @@
 package org.commoncrawl.mklab.analysis;
 
-import org.apache.commons.lang.ArrayUtils;
-import org.apache.commons.lang.StringUtils;
-
 import javax.imageio.ImageIO;
 import javax.imageio.ImageReader;
 import javax.imageio.stream.ImageInputStream;
@@ -23,11 +20,15 @@ public class FilenameAnalyzer {
     private final static String[] IMAGE_NAME_FILTER = {"avatar", "icon", "thumb", "tmb", "up", "down"};
     private final static String[] URL_PATH_FILTER = {"Images/", "/Pictures/", "/Media/", "/Gallery/", "/Pics/", "/Photos/"};
     private final static int STEP = 10000;
-    private final static int START = 500001;
-    private final static int END = 1000001;
+    private final static int START = 0;
+    private final static int END = 500000;
 
     public final static String DOWNLOAD_FOLDER = "/media/kandreadou/New Volume/Pics/";
+    public final static String DOWNLOAD_FOLDER2 = "/media/kandreadou/New Volume/Pics2/";
     private final ImageDAO dao = new ImageDAO();
+
+    private int NUM_BIG = 0;
+    private int NUM_SMALL = 0;
 
     private final void dostuff() throws IOException {
         createTrainingFile();
@@ -42,29 +43,47 @@ public class FilenameAnalyzer {
     }
 
     private void createTrainingFile() throws IOException {
-        File arffFile = new File("/home/kandreadou/Documents/cctest.arff");
+        File arffFile = new File("/home/kandreadou/Documents/commoncrawlstuff/independent_testing/features.arff");
         FileWriter fw = new FileWriter(arffFile.getAbsoluteFile());
         BufferedWriter bw = new BufferedWriter(fw);
         bw.write("@relation banners");
         bw.newLine();
         bw.newLine();
-        bw.write("@attribute suffix { jpeg, png, bmp, gif, tiff, other }");
+        bw.write("@attribute suffix_JEPG numeric");
         bw.newLine();
-        bw.write("@attribute name { avatar, icon, thumb, tmb, nothing }");
+        bw.write("@attribute suffix_PNG numeric");
         bw.newLine();
-        bw.write("@attribute path { images, pictures, media, pics, gallery, photos, nothing }");
+        bw.write("@attribute suffix_BMP numeric");
+        bw.newLine();
+        bw.write("@attribute suffix_GIF numeric");
+        bw.newLine();
+        bw.write("@attribute suffix_TIFF numeric");
         bw.newLine();
         bw.write("@attribute domDepth numeric");
         bw.newLine();
         bw.write("@attribute domSiblings numeric");
         bw.newLine();
+        bw.write("@attribute hasWidth numeric");
+        bw.newLine();
         bw.write("@attribute width numeric");
+        bw.newLine();
+        bw.write("@attribute hasHeight numeric");
         bw.newLine();
         bw.write("@attribute height numeric");
         bw.newLine();
-        bw.write("@attribute samedomain { TRUE, FALSE }");
+        bw.write("@attribute samedomain numeric");
         bw.newLine();
-        bw.write("@attribute domElement { img, link, a, embed, iframe, object }");
+        bw.write("@attribute domElement_IMG numeric");
+        bw.newLine();
+        bw.write("@attribute domElement_LINK numeric");
+        bw.newLine();
+        bw.write("@attribute domElement_A numeric");
+        bw.newLine();
+        bw.write("@attribute domElement_EMBED numeric");
+        bw.newLine();
+        bw.write("@attribute domElement_IFRAME numeric");
+        bw.newLine();
+        bw.write("@attribute domElement_OBJECT numeric");
         bw.newLine();
         bw.write("@attribute class {'SMALL','BIG'}");
         bw.newLine();
@@ -92,14 +111,16 @@ public class FilenameAnalyzer {
         boolean isSmall = false;
         boolean isBig = false;
         String imUrl = i.normalizedSrc;
-        System.out.println(i.normalizedSrc);
+        //System.out.println(i.normalizedSrc);
         String imName = getImageName(i.normalizedSrc);
         String suffix = getSuffix(imName);
-        System.out.println(suffix);
+        //System.out.println(suffix);
 
-        if ("jpg".equals(suffix) || (!"png".equals(suffix) && !"bmp".equals(suffix) && !"tiff".equals(suffix) && !"gif".equals(suffix)))
-            suffix = "jpeg";
-        Dimension dim = readFromFilewithImageReader(new File(DOWNLOAD_FOLDER + i.id + "." + suffix));
+        //if ("jpg".equals(suffix) || (!"png".equals(suffix) && !"bmp".equals(suffix) && !"tiff".equals(suffix) && !"gif".equals(suffix)))
+            //suffix = "jpeg";
+        //Dimension dim = readFromFilewithImageReader(new File(DOWNLOAD_FOLDER + i.id + "." + suffix));
+
+        Dimension dim = readFromFilewithImageReader(new File(DOWNLOAD_FOLDER2 + i.filename));
         if (dim != null) {
             double w = dim.getWidth();
             double h = dim.getHeight();
@@ -109,65 +130,60 @@ public class FilenameAnalyzer {
                 isBig = true;
             if (!isSmall && !isBig)
                 return false;
+            /*if (isSmall && NUM_SMALL > NUM_BIG + 10)
+                return false;
+            else if (isBig && NUM_BIG >NUM_SMALL + 10)
+                return false;
+            else{
+                if(isSmall)
+                    NUM_SMALL++;
+                else
+                    NUM_BIG++;
+                System.out.println("SMALL "+NUM_SMALL+" BIG "+NUM_BIG);
+            }*/
+
         }
 
-        if (!"png".equals(suffix) && !"bmp".equals(suffix) && !"tiff".equals(suffix) && !"gif".equals(suffix) && !"jpeg".equals(suffix))
-            bw.write("other,");
-        else
-            bw.write(suffix + ',');
+        bw.write(String.valueOf("jpeg".equals(suffix) ? 1 : 0) + ',');
+        bw.write(String.valueOf("png".equals(suffix) ? 1 : 0) + ',');
+        bw.write(String.valueOf("bmp".equals(suffix) ? 1 : 0) + ',');
+        bw.write(String.valueOf("gif".equals(suffix) ? 1 : 0) + ',');
+        bw.write(String.valueOf("tiff".equals(suffix) ? 1 : 0) + ',');
 
-        String imageNamelc = imName.toLowerCase();
-        if (imageNamelc.contains("avatar"))
-            bw.write("avatar,");
-        else if (imageNamelc.contains("icon"))
-            bw.write("icon,");
-        else if (imageNamelc.contains("thumb"))
-            bw.write("thumb,");
-        else if (imageNamelc.contains("tmb"))
-            bw.write("tmb,");
-        else
-            bw.write("nothing,");
-
-        String imUrllc = imName.toLowerCase();
-        if (imUrllc.contains("images"))
-            bw.write("images,");
-        else if (imUrllc.contains("pictures"))
-            bw.write("images,");
-        else if (imUrllc.contains("media"))
-            bw.write("media,");
-        else if (imUrllc.contains("pics"))
-            bw.write("pics,");
-        else if (imUrllc.contains("gallery"))
-            bw.write("gallery,");
-        else if (imUrllc.contains("photos"))
-            bw.write("photos,");
-        else
-            bw.write("nothing,");
-
-        bw.write(i.domDepth + ",");
-        bw.write(i.domSib + ",");
+        bw.write(String.valueOf(i.domDepth) + ',');
+        bw.write(String.valueOf(i.domSib) + ',');
 
         //estimated dimensions from url
         int[] dims = extractNumeric(i.normalizedSrc);
-        bw.write(dims[0] + ",");
-        bw.write(dims[1] + ",");
+        bw.write(String.valueOf(dims[0] > 0 ? 1 : 0) + ',');
+        bw.write(String.valueOf(dims[0]) + ',');
+        bw.write(String.valueOf(dims[1] > 0 ? 1 : 0) + ',');
+        bw.write(String.valueOf(dims[1]) + ',');
 
         try {
             URL page = new URL(imUrl);
             String imHost = page.getHost();
             page = new URL(i.pageUrl);
             String pageHost = page.getHost();
-            bw.write(imHost.equalsIgnoreCase(pageHost) ? "TRUE" : "FALSE" + ',');
+            bw.write(String.valueOf(imHost.equalsIgnoreCase(pageHost) ? 1 : 0) + ',');
         } catch (MalformedURLException ex) {
             System.out.println(ex);
-            bw.write("FALSE,");
+            bw.write("0,");
         }
 
-        bw.write(i.domElem + ',');
+        bw.write(String.valueOf("img".equals(i.domElem) ? 1 : 0) + ',');
+        bw.write(String.valueOf("link".equals(i.domElem) ? 1 : 0) + ',');
+        bw.write(String.valueOf("a".equals(i.domElem) ? 1 : 0) + ',');
+        bw.write(String.valueOf("embed".equals(i.domElem) ? 1 : 0) + ',');
+        bw.write(String.valueOf("iframe".equals(i.domElem) ? 1 : 0) + ',');
+        bw.write(String.valueOf("object".equals(i.domElem) ? 1 : 0) + ',');
+
         bw.write(isSmall ? "SMALL" : "BIG");
+
         return true;
     }
 
+    @Deprecated
     private int[] createFeatureVector(CrawledImage i) {
         int[] fVector = new int[28];
         String imUrl = i.normalizedSrc;
@@ -343,7 +359,7 @@ public class FilenameAnalyzer {
     }
 
     public static void main(String[] args) throws Exception {
-        MorphiaManager.setup("commoncrawl");
+        MorphiaManager.setup("commoncrawl2");
         FilenameAnalyzer f = new FilenameAnalyzer();
         f.dostuff();
         MorphiaManager.tearDown();

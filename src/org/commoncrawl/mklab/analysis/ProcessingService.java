@@ -1,14 +1,31 @@
 package org.commoncrawl.mklab.analysis;
 
+import gr.iti.mklab.simmo.items.Image;
+import gr.iti.mklab.simmo.morphia.MediaDAO;
+import org.apache.commons.httpclient.HttpClient;
+import org.apache.commons.httpclient.HttpMethod;
+import org.apache.commons.httpclient.MultiThreadedHttpConnectionManager;
+import org.apache.commons.httpclient.methods.GetMethod;
+import org.apache.commons.httpclient.util.DateUtil;
 import org.apache.commons.lang.StringUtils;
+import org.apache.http.HttpStatus;
+import org.apache.http.protocol.HTTP;
+import org.bson.types.ObjectId;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.net.URLEncoder;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.Date;
 import java.util.UUID;
 import java.util.concurrent.*;
 import java.util.regex.Pattern;
@@ -30,11 +47,33 @@ public class ProcessingService {
     private static Pattern youtubePattern = Pattern.compile("https*://www.youtube.com/watch?.*v=([a-zA-Z0-9_\\-]+)(&.+=.+)*");
     private static Pattern vimeoPattern = Pattern.compile("https*://vimeo.com/([0-9]+)/*$");
     private static Pattern dailymotionPattern = Pattern.compile("https*://www.dailymotion.com/video/([A-Za-z0-9]+)_.*$");
-    private final static String DOWNLOAD_FOLDER = "/media/kandreadou/New Volume/Pics/";
+    private final static String DOWNLOAD_FOLDER = "/media/kandreadou/New Volume/Pics2/";
     private static final int MIN_CALL_INTERVAL = 250;
 
     private int numPendingTasks;
     private long lastDownLoadCall = 0;
+    private HttpClient client;
+    private MediaDAO<Image> imageDAO;
+
+    private MessageDigest md;
+
+    public ProcessingService() {
+        //IndexingManage.getInstance();
+        gr.iti.mklab.simmo.morphia.MorphiaManager.setup("127.0.0.1");
+        imageDAO = new MediaDAO<Image>(Image.class, "demopaper20K");
+        client = new HttpClient(new MultiThreadedHttpConnectionManager());
+
+        //establish a connection within 5 seconds
+        client.getHttpConnectionManager().
+                getParams().setConnectionTimeout(CONNECTION_TIMEOUT);
+
+        try {
+            md = MessageDigest.getInstance("MD5");
+        } catch (NoSuchAlgorithmException nae) {
+            System.out.println(nae);
+        }
+
+    }
 
     public void submitTask(CrawledImage image) {
         if (!StringUtils.isEmpty(image.src) && !StringUtils.isEmpty(image.pageUrl)) {
@@ -68,6 +107,7 @@ public class ProcessingService {
     }
 
     public void shutDown() {
+        gr.iti.mklab.simmo.morphia.MorphiaManager.tearDown();
         executor.shutdown(); // Disable new tasks from being submitted
         try {
             // Wait a while for existing tasks to terminate
@@ -124,6 +164,66 @@ public class ProcessingService {
             //printStatus();
         }
 
+        // new for the demo paper
+        protected synchronized void newStoreAndIndex(URL imgurl) {
+            try {
+                BufferedImage input = ImageUtils.downloadImage(imgurl.toString());
+                if(input==null || input.getWidth()<400 || input.getHeight()<400)
+                    return;
+                if(IndexingManage.getInstance().indexImage(imgurl.toString(), input)){
+                    Image img = new Image();
+                    img.setId(new ObjectId().toString());
+                    img.setHeight(input.getWidth());
+                    img.setWidth(input.getWidth());
+                    img.setAlternateText(image.alt);
+                    img.setDescription(image.parentTxt);
+                    img.setWebPageUrl(image.pageUrl);
+                    img.setUrl(image.normalizedSrc);
+                    //img.setLastModifiedDate(new Date(lastModified));
+                    imageDAO.save(img);
+                }
+            } catch (Exception e) {
+                //System.out.println(e);
+            }
+        }
+
+        //new for the review meeting
+        protected synchronized void storeAndIndex(URL imgurl) {
+
+            //System.out.println("Store and index "+imgurl);
+            HttpMethod method = null;
+
+            try {
+                BufferedImage input = ImageUtils.downloadImage(imgurl.toString());
+                long lastModified = ImageUtils.lastLastModified;
+                if (ImageUtils.checkImage(input)) {
+                    System.out.println("Getting " + imgurl);
+                    method = new GetMethod("http://160.40.51.20:8080/reveal/mmapi/media/review29jan15/index?imageurl=" + URLEncoder.encode(imgurl.toString(), "UTF-8"));
+                    method.setFollowRedirects(true);
+                    int statusCode = client.executeMethod(method);
+
+                    if (statusCode != HttpStatus.SC_OK) {
+                        System.out.println("HTTP not ok for " + imgurl.toString());
+                    } else {
+                        Image img = new Image();
+                        img.setHeight(input.getWidth());
+                        img.setWidth(input.getWidth());
+                        img.setAlternateText(image.alt);
+                        img.setDescription(image.parentTxt);
+                        img.setWebPageUrl(image.pageUrl);
+                        img.setUrl(image.normalizedSrc);
+                        img.setLastModifiedDate(new Date(lastModified));
+                        imageDAO.save(img);
+                    }
+                }
+            } catch (Exception e) {
+                System.out.println(e);
+            } finally {
+                if (method != null)
+                    method.releaseConnection();
+            }
+        }
+
         protected void download(URL imgurl) {
 
             HttpURLConnection conn = null;
@@ -142,6 +242,7 @@ public class ProcessingService {
                     if (!dao.exists("_id", id.toString())) {
                         String fileExtension = ct.substring(ct.indexOf('/') + 1);
                         imageFilename = DOWNLOAD_FOLDER + id + "." + fileExtension;
+                        image.filename = image.id+'.'+fileExtension;
                         rbc = Channels.newChannel(conn.getInputStream());
                         fos = new FileOutputStream(imageFilename);
                         fos.getChannel().transferFrom(rbc, 0, Long.MAX_VALUE);
@@ -209,6 +310,7 @@ public class ProcessingService {
                             now = System.currentTimeMillis();
                         }
                         download(page);
+                        //newStoreAndIndex(page);
                     }
                 }
                 return true;

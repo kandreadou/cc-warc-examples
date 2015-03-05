@@ -37,12 +37,12 @@ public class NGramAnalyzer {
     private static void createNgramFile() throws IOException{
         MorphiaManager.setup("commoncrawl");
         NGramAnalyzer a = new NGramAnalyzer();
-        a.extractNgramsFromCommonCrawl();
+        a.extractNgramsFromAltText();
         MorphiaManager.tearDown();
 
         Iterable<Multiset.Entry<String>> multiset =
                 Multisets.copyHighestCountFirst(NGRAM_FREQUENCIES).entrySet();
-        PrintWriter writer = new PrintWriter(new BufferedWriter(new FileWriter("/home/kandreadou/Documents/ngrams.txt",false)));
+        PrintWriter writer = new PrintWriter(new BufferedWriter(new FileWriter("/home/kandreadou/Documents/commoncrawlstuff/ngrams_alt/ngramsalt.txt",false)));
         for (Multiset.Entry<String> s : multiset) {
             if(s.getCount()<50)
                 break;
@@ -57,6 +57,21 @@ public class NGramAnalyzer {
             List<CrawledImage> list = dao.findRange(k, STEP);
             for (CrawledImage i : list) {
                 processURL(i.normalizedSrc);
+            }
+        }
+    }
+
+    private void extractNgramsFromAltText() {
+        for (int k = START; k < END; k += STEP) {
+            List<CrawledImage> list = dao.findRange(k, STEP);
+            for (CrawledImage i : list) {
+                if(i.alt!=null) {
+                    try {
+                        extractNGrams(i.alt);
+                    } catch (Exception e) {
+                        System.out.println(e);
+                    }
+                }
             }
         }
     }
