@@ -1,6 +1,8 @@
-package org.commoncrawl.mklab.analysis;
+package org.commoncrawl.mklab.ngrams;
 
 import org.apache.commons.lang.StringUtils;
+import org.commoncrawl.mklab.analysis.CrawledImage;
+import org.commoncrawl.mklab.ngrams.IArffCreator;
 
 import javax.imageio.ImageIO;
 import javax.imageio.ImageReader;
@@ -17,33 +19,14 @@ import java.util.regex.Pattern;
 /**
  * Created by kandreadou on 12/3/14.
  */
-public class FilenameAnalyzer {
+public class FeaturesArffCreator extends IArffCreator {
 
-    private final static String[] IMAGE_NAME_FILTER = {"avatar", "icon", "thumb", "tmb", "up", "down"};
-    private final static String[] URL_PATH_FILTER = {"Images/", "/Pictures/", "/Media/", "/Gallery/", "/Pics/", "/Photos/"};
-    private final static int STEP = 1000;
-    private final static int START = 0;
-    private final static int END = 10000;
-    private final static int MAX_BIG = 500;
-    private final static int MAX_SMALL = 500;
-
-    public final static String DOWNLOAD_FOLDER2 = "/media/kandreadou/New Volume/Pics2/";
-    private final ImageDAO dao = new ImageDAO();
-
-    private int NUM_BIG = 0;
-    private int NUM_SMALL = 0;
-
-    public static void main(String[] args) throws Exception {
-        MorphiaManager.setup("commoncrawl2");
-        FilenameAnalyzer f = new FilenameAnalyzer();
-        f.createTrainingFile("/home/kandreadou/Documents/commoncrawlstuff/training_data/justatest.arff");
-        MorphiaManager.tearDown();
+    public FeaturesArffCreator(String filename) throws IOException {
+        super(filename);
     }
 
-    private void createTrainingFile(String filname) throws IOException {
-        File arffFile = new File(filname);
-        FileWriter fw = new FileWriter(arffFile.getAbsoluteFile());
-        BufferedWriter bw = new BufferedWriter(fw);
+    @Override
+    public void initialize() throws IOException {
         bw.write("@relation banners");
         bw.newLine();
         bw.newLine();
@@ -98,58 +81,27 @@ public class FilenameAnalyzer {
         bw.newLine();
         bw.write("@data");
         bw.newLine();
+    }
 
-        for (int k = START; k < END; k += STEP) {
-            List<CrawledImage> list = dao.findRange(k, STEP);
-            for (CrawledImage i : list) {
-                if (NUM_SMALL > MAX_SMALL && NUM_BIG > MAX_BIG)
-                    break;
-                try {
-                    if (writeFeatureVector(i, bw))
-                        bw.newLine();
-                } catch (IOException ioe) {
-                    System.out.println(ioe);
-                }
-            }
-        }
+    @Override
+    public void writeFeatureVector(CrawledImage i, boolean isBig) throws IOException {
+        writeFeatureVector1(i, isBig);
+        bw.newLine();
+    }
+
+    @Override
+    public void teardown() throws IOException {
         bw.close();
         fw.close();
     }
 
-    private boolean writeFeatureVector(CrawledImage i, BufferedWriter bw) throws IOException {
+    private void writeFeatureVector1(CrawledImage i, boolean isBig) throws IOException {
 
-        boolean isSmall = false;
-        boolean isBig = false;
         String imUrl = i.normalizedSrc;
         //System.out.println(i.normalizedSrc);
         String imName = getImageName(i.normalizedSrc);
         String suffix = getSuffix(imName);
         //System.out.println(suffix);
-
-        Dimension dim = readFromFilewithImageReader(new File(DOWNLOAD_FOLDER2 + i.filename));
-        if (dim == null)
-            return false;
-        else {
-            double w = dim.getWidth();
-            double h = dim.getHeight();
-            if (w < 200 && h < 200)
-                isSmall = true;
-            if (w > 400 && h > 400)
-                isBig = true;
-            if (!isSmall && !isBig)
-                return false;
-            if (isSmall && NUM_SMALL > MAX_SMALL)
-                return false;
-            else if (isBig && NUM_BIG > MAX_BIG)
-                return false;
-            else {
-                if (isSmall)
-                    NUM_SMALL++;
-                else
-                    NUM_BIG++;
-                System.out.println("SMALL " + NUM_SMALL + " BIG " + NUM_BIG);
-            }
-        }
 
         bw.write(String.valueOf("jpeg".equals(suffix) ? 1 : 0) + ',');
         bw.write(String.valueOf("png".equals(suffix) ? 1 : 0) + ',');
@@ -197,9 +149,7 @@ public class FilenameAnalyzer {
         }
         bw.write(String.valueOf(i.normalizedSrc.length()) + ',');
 
-        bw.write(isSmall ? "SMALL" : "BIG");
-
-        return true;
+        bw.write(isBig ? "BIG" : "SMALL");
     }
 
     public final static int[] extractNumeric(String input) {
@@ -241,47 +191,5 @@ public class FilenameAnalyzer {
 
     public final static String getSuffix(String name) {
         return name.substring(name.lastIndexOf(".") + 1);
-    }
-
-    //Approximate duration 120 ms
-    private Dimension readFromURLwithImageReader(URL url) throws IOException {
-        ImageInputStream in = ImageIO.createImageInputStream(url.openStream());
-        try {
-            final Iterator<ImageReader> readers = ImageIO.getImageReaders(in);
-            if (readers.hasNext()) {
-                ImageReader reader = readers.next();
-                try {
-                    reader.setInput(in);
-                    return new Dimension(reader.getWidth(0), reader.getHeight(0));
-                } finally {
-                    reader.dispose();
-                }
-            }
-        } finally {
-            if (in != null) in.close();
-        }
-        return null;
-    }
-
-    //Approximate duration 1 ms
-    public static Dimension readFromFilewithImageReader(File file) throws IOException {
-        ImageInputStream in = ImageIO.createImageInputStream(new FileInputStream(file));
-        try {
-            final Iterator<ImageReader> readers = ImageIO.getImageReaders(in);
-            if (readers.hasNext()) {
-                ImageReader reader = readers.next();
-                try {
-                    reader.setInput(in);
-                    return new Dimension(reader.getWidth(0), reader.getHeight(0));
-                } catch (Exception ex) {
-                    System.out.println(ex);
-                } finally {
-                    reader.dispose();
-                }
-            }
-        } finally {
-            if (in != null) in.close();
-        }
-        return null;
     }
 }

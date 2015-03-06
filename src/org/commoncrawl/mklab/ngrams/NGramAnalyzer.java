@@ -21,15 +21,15 @@ public class NGramAnalyzer {
     public final static int MIN_NGRAM_SIZE = 3;
     public final static int MAX_NGRAM_SIZE = 5;
     private final ImageDAO dao = new ImageDAO();
-    private final static int STEP = 1000;
+    private final static int STEP = 10000;
     private final static int START = 0;
-    private final static int END = 10000;
+    private final static int END = 500000;
 
     public static Multiset<String> NGRAM_FREQUENCIES = ConcurrentHashMultiset.create();
 
     public static void main(String[] args) throws Exception {
         MorphiaManager.setup("commoncrawl2");
-        createNgramFile("/home/kandreadou/Documents/commoncrawlstuff/training_data/ngramsjustatest.txt");
+        createNgramFile("/home/kandreadou/Documents/commoncrawlstuff/training_data/ngrams_url.txt");
         MorphiaManager.tearDown();
     }
 
@@ -66,7 +66,7 @@ public class NGramAnalyzer {
     public static void processURL(String s) {
         try {
             s = URLDecoder.decode(s, "UTF-8");
-        }catch(UnsupportedEncodingException uee){
+        }catch(Exception uee){
             System.out.println("Wrong encoding "+uee);
         }
         //System.out.println("** " + s);

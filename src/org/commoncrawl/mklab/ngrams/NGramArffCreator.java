@@ -4,11 +4,7 @@ import com.google.common.base.Strings;
 import org.apache.lucene.analysis.ngram.NGramTokenizer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.commoncrawl.mklab.analysis.CrawledImage;
-import org.commoncrawl.mklab.analysis.FilenameAnalyzer;
-import org.commoncrawl.mklab.analysis.ImageDAO;
-import org.commoncrawl.mklab.analysis.MorphiaManager;
 
-import java.awt.*;
 import java.io.*;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
@@ -21,29 +17,49 @@ import java.util.Set;
 /**
  * Created by kandreadou on 1/5/15.
  */
-public class NGramArffCreator {
+public class NGramArffCreator extends IArffCreator {
 
-    private final static int STEP = 10000;
-    private final static int START = 0;
-    private final static int END = 500000;
-    private final static int NUM_NGRAMS = 10000;
+    private final static int NUM_NGRAMS = 1000;
     private final static String[] NGRAMS = new String[NUM_NGRAMS];
     private final static String NGRAMS_FILE = "/home/kandreadou/Documents/commoncrawlstuff/training_data/ngrams_url.txt";
-    private final static String ARFF_FILE = "/home/kandreadou/Documents/commoncrawlstuff/training_data/ngrams_url_train.arff";
 
-    public static void main(String[] args) throws Exception {
-        NGramArffCreator n = new NGramArffCreator();
-        MorphiaManager.setup("commoncrawl2");
-        n.readNgramsFromFile();
-        n.createArffFile();
-        MorphiaManager.tearDown();
 
+    public NGramArffCreator(String filename) throws IOException {
+        super(filename);
     }
 
-    private boolean isBig2(CrawledImage i) throws IOException {
+    @Override
+    public void initialize() throws IOException {
+        readNgramsFromFile();
+        bw.write("@relation ngrams");
+        bw.newLine();
+        bw.newLine();
+        for (int i = 0; i < NUM_NGRAMS; i++) {
+            bw.write("@attribute ngram" + i + " numeric");
+            bw.newLine();
+        }
+        bw.write("@attribute class {'SMALL','BIG'}");
+        bw.newLine();
+        bw.newLine();
+        bw.write("@data");
+        bw.newLine();
+    }
 
-        Dimension d = FilenameAnalyzer.readFromFilewithImageReader(new File(FilenameAnalyzer.DOWNLOAD_FOLDER2 + i.filename));
-        return d.getWidth() > 400 && d.getHeight() > 400;
+    @Override
+    public void writeFeatureVector(CrawledImage i, boolean isBig) throws IOException {
+        boolean[] ngramVector = getNGramVector(i);
+
+        for (boolean b : ngramVector) {
+            bw.write(String.valueOf(b ? 1 : 0) + ',');
+        }
+        bw.write(isBig ? "BIG" : "SMALL");
+        bw.newLine();
+    }
+
+    @Override
+    public void teardown() throws IOException {
+        bw.close();
+        fw.close();
     }
 
     private void readNgramsFromFile() throws IOException {
@@ -59,48 +75,6 @@ public class NGramArffCreator {
             }
         }
     }
-
-    private void createArffFile() throws IOException {
-        ImageDAO dao = new ImageDAO();
-        File arffFile = new File(ARFF_FILE);
-        FileWriter fw = new FileWriter(arffFile.getAbsoluteFile());
-        BufferedWriter bw = new BufferedWriter(fw);
-        bw.write("@relation ngrams");
-        bw.newLine();
-        bw.newLine();
-        for (int i = 0; i < NUM_NGRAMS; i++) {
-            bw.write("@attribute ngram numeric");
-            bw.newLine();
-        }
-        bw.write("@attribute class {'SMALL','BIG'}");
-        bw.newLine();
-        bw.newLine();
-        bw.write("@data");
-        bw.newLine();
-
-        for (int k = START; k < END; k += STEP) {
-            System.out.println("K= " + k);
-            List<CrawledImage> list = dao.findRange(k, STEP);
-            for (CrawledImage i : list) {
-                try {
-                    boolean[] ngramVector = getNGramVector(i);
-                    boolean isBig = isBig2(i);
-                    for (boolean b : ngramVector) {
-                        bw.write(String.valueOf(b ? 1 : 0) + ',');
-                    }
-                    bw.write(isBig ? "BIG" : "SMALL");
-                    bw.newLine();
-                } catch (IOException ioe) {
-                    System.out.println(ioe);
-                } catch (NullPointerException npe) {
-                    //System.out.println(npe);
-                }
-            }
-        }
-        bw.close();
-        fw.close();
-    }
-
 
     private boolean[] getNGramVectorAlt(CrawledImage i) throws NullPointerException, IOException {
         if (Strings.isNullOrEmpty(i.alt))
