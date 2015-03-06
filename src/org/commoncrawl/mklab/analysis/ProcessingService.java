@@ -8,6 +8,8 @@ import org.apache.commons.httpclient.MultiThreadedHttpConnectionManager;
 import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.commons.httpclient.util.DateUtil;
 import org.apache.commons.lang.StringUtils;
+import org.apache.http.HttpEntity;
+import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
 import org.apache.http.protocol.HTTP;
 import org.bson.types.ObjectId;
@@ -17,6 +19,7 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -35,7 +38,7 @@ import java.util.regex.Pattern;
  */
 public class ProcessingService {
 
-    private static final int NUM_DOWNLOAD_THREADS = 10;
+    private static final int NUM_DOWNLOAD_THREADS = 1000;
     private static final int MAX_NUM_PENDING_TASKS = 10 * NUM_DOWNLOAD_THREADS;
     private static final int CONNECTION_TIMEOUT = 1000; // in millis
     private static final int READ_TIMEOUT = 1000; // in millis
@@ -47,7 +50,7 @@ public class ProcessingService {
     private static Pattern youtubePattern = Pattern.compile("https*://www.youtube.com/watch?.*v=([a-zA-Z0-9_\\-]+)(&.+=.+)*");
     private static Pattern vimeoPattern = Pattern.compile("https*://vimeo.com/([0-9]+)/*$");
     private static Pattern dailymotionPattern = Pattern.compile("https*://www.dailymotion.com/video/([A-Za-z0-9]+)_.*$");
-    private final static String DOWNLOAD_FOLDER = "/media/kandreadou/New Volume/Pics2/";
+    private final static String DOWNLOAD_FOLDER = "/media/kandreadou/New Volume/Pics_train/";
     private static final int MIN_CALL_INTERVAL = 250;
 
     private int numPendingTasks;
@@ -157,6 +160,36 @@ public class ProcessingService {
             }
             if (isUnique) {
                 Statistics.GLOBAL_COUNT++;
+                try {
+                    URL page = new URL(imageUrl);
+                    if (page != null) {
+                        String pageHost = page.getHost();
+                        imageHost = pageHost;
+                        long now = System.currentTimeMillis();
+                        while (now - lastDownLoadCall < MIN_CALL_INTERVAL) {
+                            Thread.sleep(MIN_CALL_INTERVAL);
+                            now = System.currentTimeMillis();
+                        }
+                        download(page);
+                    }
+                } catch (MalformedURLException mue) {
+                    //ignore
+                } catch (InterruptedException ie) {
+                    //ignore
+                }
+
+            }
+
+        }
+
+        protected void processOld() {
+            //If the URL is unique
+            boolean isUnique = false;
+            synchronized (Statistics.UNIQUE_URLS) {
+                isUnique = Statistics.UNIQUE_URLS.put(imageUrl);
+            }
+            if (isUnique) {
+                Statistics.GLOBAL_COUNT++;
                 //Handle imageUrl
                 success &= handleHostUrl(imageUrl, false);
                 success &= handleHostUrl(pageUrl, true);
@@ -168,9 +201,9 @@ public class ProcessingService {
         protected synchronized void newStoreAndIndex(URL imgurl) {
             try {
                 BufferedImage input = ImageUtils.downloadImage(imgurl.toString());
-                if(input==null || input.getWidth()<400 || input.getHeight()<400)
+                if (input == null || input.getWidth() < 400 || input.getHeight() < 400)
                     return;
-                if(IndexingManage.getInstance().indexImage(imgurl.toString(), input)){
+                if (IndexingManage.getInstance().indexImage(imgurl.toString(), input)) {
                     Image img = new Image();
                     img.setId(new ObjectId().toString());
                     img.setHeight(input.getWidth());
@@ -226,6 +259,14 @@ public class ProcessingService {
 
         protected void download(URL imgurl) {
 
+            System.out.println(imgurl.toString());
+
+            //GetMethod method = new GetMethod(imgurl.toString());
+            //method.setFollowRedirects(true);
+            //int statusCode = client.executeMethod(method);
+            //method.getResponseBodyAsStream()
+
+
             HttpURLConnection conn = null;
             FileOutputStream fos = null;
             ReadableByteChannel rbc = null;
@@ -242,7 +283,7 @@ public class ProcessingService {
                     if (!dao.exists("_id", id.toString())) {
                         String fileExtension = ct.substring(ct.indexOf('/') + 1);
                         imageFilename = DOWNLOAD_FOLDER + id + "." + fileExtension;
-                        image.filename = image.id+'.'+fileExtension;
+                        image.filename = image.id + '.' + fileExtension;
                         rbc = Channels.newChannel(conn.getInputStream());
                         fos = new FileOutputStream(imageFilename);
                         fos.getChannel().transferFrom(rbc, 0, Long.MAX_VALUE);
@@ -272,7 +313,7 @@ public class ProcessingService {
                         conn = null;
                     }
                 } catch (Exception ex) {
-                    //ignore
+                    System.out.println("Connection exception " + ex);
                 }
             }
         }
@@ -293,31 +334,32 @@ public class ProcessingService {
                 if (pageHost.startsWith("www.")) {
                     pageHost = pageHost.substring(4);
                 }
-                if (CommonCrawlAnalyzer.STRINGS.contains(pageHost)) {
-                    if (isWebPage) {
-                        Statistics.NEWS_WEBPAGES_FREQUENCIES.add(pageHost);
-                        Statistics.addImageUrlForHost(imageHost, pageHost);
-                    } else if (isVideo(url)) {
-                        Statistics.NEWS_VIDEO_FREQUENCIES.add(pageHost);
-                    } else {
-                        Statistics.NEWS_IMAGES_FREQUENCIES.add(pageHost);
-                        if (CommonCrawlAnalyzer.CASES.contains(url)) {
-                            Statistics.CASES_FREQUENCIES.add(url);
-                        }
-                        long now = System.currentTimeMillis();
-                        while (now - lastDownLoadCall < MIN_CALL_INTERVAL) {
-                            Thread.sleep(MIN_CALL_INTERVAL);
-                            now = System.currentTimeMillis();
-                        }
-                        download(page);
-                        //newStoreAndIndex(page);
+                //if (CommonCrawlAnalyzer.STRINGS.contains(pageHost)) {
+                if (isWebPage) {
+                    Statistics.NEWS_WEBPAGES_FREQUENCIES.add(pageHost);
+                    Statistics.addImageUrlForHost(imageHost, pageHost);
+                } else if (isVideo(url)) {
+                    Statistics.NEWS_VIDEO_FREQUENCIES.add(pageHost);
+                } else {
+                    Statistics.NEWS_IMAGES_FREQUENCIES.add(pageHost);
+                    if (CommonCrawlAnalyzer.CASES.contains(url)) {
+                        Statistics.CASES_FREQUENCIES.add(url);
                     }
+                    long now = System.currentTimeMillis();
+                    while (now - lastDownLoadCall < MIN_CALL_INTERVAL) {
+                        Thread.sleep(MIN_CALL_INTERVAL);
+                        now = System.currentTimeMillis();
+                    }
+                    download(page);
+                    //newStoreAndIndex(page);
                 }
+                //}
                 return true;
             } catch (MalformedURLException mue) {
                 //System.out.println("handleHostUrl(): " + mue);
                 return false;
             } catch (InterruptedException ie) {
+                System.out.println("InterruptedException " + ie);
                 return false;
             }
         }
@@ -328,45 +370,37 @@ public class ProcessingService {
             try {
                 url = new URL(imageUrl);
             } catch (Exception mue) {
-                if (mue.getMessage().startsWith("no protocol")) {
-                    try {
-                        url = new URL("http://" + imageUrl);
-                        imageUrl = url.toString();
-                        success = true;
-                    } catch (Exception e) {
-                        success = false;
-                    }
-                } else
-                    try {
-                        URL baseUrl = new URL(pageUrl);
-                        // check if the imageUrl path is like this ../..
-                        String[] elements = imageUrl.split("\\.\\.");
-                        int len = elements.length;
-                        if (len > 1) {
-                            //System.out.println("^^^"+ Arrays.toString(elements));
-                            imageUrl = elements[len - 1];
-                            //System.out.println("##### "+imageUrl);
-                            String baseUrlPath = baseUrl.getPath();
-                            int lastIndexOfSlash = baseUrlPath.lastIndexOf('/');
-                            while (len > 0 && lastIndexOfSlash > 2) {
-                                baseUrlPath = baseUrlPath.substring(0, lastIndexOfSlash);
-                                //System.out.println("########page "+pageUrl);
-                                len--;
-                                lastIndexOfSlash = baseUrlPath.lastIndexOf('/');
-                            }
-                            url = new URL(baseUrl.getProtocol() + "://" + baseUrl.getHost() + baseUrlPath + imageUrl);
-                        } else {
-                            //remove slash at the end of the host name
-                            String host = baseUrl.getHost().substring(0, baseUrl.getHost().length());
-                            url = new URL(baseUrl.getProtocol() + "://" + host + imageUrl);
+
+                try {
+                    URL baseUrl = new URL(pageUrl);
+                    // check if the imageUrl path is like this ../..
+                    String[] elements = imageUrl.split("\\.\\.");
+                    int len = elements.length;
+                    if (len > 1) {
+                        //System.out.println("^^^"+ Arrays.toString(elements));
+                        imageUrl = elements[len - 1];
+                        //System.out.println("##### "+imageUrl);
+                        String baseUrlPath = baseUrl.getPath();
+                        int lastIndexOfSlash = baseUrlPath.lastIndexOf('/');
+                        while (len > 0 && lastIndexOfSlash > 2) {
+                            baseUrlPath = baseUrlPath.substring(0, lastIndexOfSlash);
+                            //System.out.println("########page "+pageUrl);
+                            len--;
+                            lastIndexOfSlash = baseUrlPath.lastIndexOf('/');
                         }
-                        imageUrl = url.toString();
-                        success = true;
-                        //System.out.println(url.toString());
-                    } catch (Exception e) {
-                        //System.out.println("Failed to recontruct url " + url + "Exception " + e);
-                        success = false;
+                        url = new URL(baseUrl.getProtocol() + "://" + baseUrl.getHost() + baseUrlPath + imageUrl);
+                    } else {
+                        //remove slash at the end of the host name
+                        String host = baseUrl.getHost().substring(0, baseUrl.getHost().length());
+                        url = new URL(baseUrl.getProtocol() + "://" + host + (imageUrl.startsWith("/")?"":"/")+ imageUrl);
                     }
+                    imageUrl = url.toString();
+                    success = true;
+                    //System.out.println(url.toString());
+                } catch (Exception e) {
+                    //System.out.println("Failed to recontruct url " + url + "Exception " + e);
+                    success = false;
+                }
             }
         }
     }
@@ -399,9 +433,14 @@ public class ProcessingService {
     }
 
     public static void main(String[] args) {
+        MorphiaManager.setup("127.0.0.1");
         ProcessingService service = new ProcessingService();
+        CrawledImage i = new CrawledImage();
+        i.src = "typo3temp/pics/4eaab97c99.jpg";
+        i.pageUrl = "http://www.unradio.unal.edu.co/detalle/cy/2012/cm/4/article/autismo-ii.html";
         if (service.canAcceptMoreTasks()) {
-            //service.submitTask("c.o0bg.com/rf/image_r/Boston/2011-2020/2014/02/05/BostonGlobe.com/EditorialOpinion/Images/0205toon_wasserman-1311.jpg", "www.google.com", null);
+
+            service.submitTask(i);
         } else {
             service.printStatus();
         }
@@ -419,7 +458,9 @@ public class ProcessingService {
                                 System.out.println("Failed " + r.url);
                         }*/
             r = service.tryGetResult();
+            System.out.println(i.normalizedSrc);
         }
+        MorphiaManager.tearDown();
         //String url = "http://www.efsyn.gr/";
         //System.out.println(isVideo(url));
         /*String imageUrl = "/images/content/pagebuilder/KAD12-Logo-Header2.png";

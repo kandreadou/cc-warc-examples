@@ -10,6 +10,7 @@ import org.commoncrawl.mklab.analysis.ImageDAO;
 import org.commoncrawl.mklab.analysis.MorphiaManager;
 
 import java.io.*;
+import java.net.URLDecoder;
 import java.util.List;
 
 /**
@@ -22,37 +23,37 @@ public class NGramAnalyzer {
     private final ImageDAO dao = new ImageDAO();
     private final static int STEP = 1000;
     private final static int START = 0;
-    private final static int END = 500000;
+    private final static int END = 10000;
 
     public static Multiset<String> NGRAM_FREQUENCIES = ConcurrentHashMultiset.create();
 
     public static void main(String[] args) throws Exception {
-       createNgramFile();
+        MorphiaManager.setup("commoncrawl2");
+        createNgramFile("/home/kandreadou/Documents/commoncrawlstuff/training_data/ngramsjustatest.txt");
+        MorphiaManager.tearDown();
     }
 
     ///////////////////////////////////////////////////////
     //////////////// NGRAM FILE SECTION   /////////////////
     ///////////////////////////////////////////////////////
 
-    private static void createNgramFile() throws IOException{
-        MorphiaManager.setup("commoncrawl");
+    private static void createNgramFile(String filename) throws IOException {
+
         NGramAnalyzer a = new NGramAnalyzer();
-        a.extractNgramsFromAltText();
-        MorphiaManager.tearDown();
+        a.extractNgramsFromURL();
 
         Iterable<Multiset.Entry<String>> multiset =
                 Multisets.copyHighestCountFirst(NGRAM_FREQUENCIES).entrySet();
-        PrintWriter writer = new PrintWriter(new BufferedWriter(new FileWriter("/home/kandreadou/Documents/commoncrawlstuff/ngrams_alt/ngramsalt.txt",false)));
+        PrintWriter writer = new PrintWriter(new BufferedWriter(new FileWriter(filename, false)));
         for (Multiset.Entry<String> s : multiset) {
-            if(s.getCount()<50)
+            if (s.getCount() < 50)
                 break;
             writer.println(s.getElement() + " " + s.getCount());
-            //System.out.println(s.getElement() + " " + s.getCount());
         }
         writer.close();
     }
 
-    private void extractNgramsFromCommonCrawl() {
+    private void extractNgramsFromURL() {
         for (int k = START; k < END; k += STEP) {
             List<CrawledImage> list = dao.findRange(k, STEP);
             for (CrawledImage i : list) {
@@ -61,22 +62,13 @@ public class NGramAnalyzer {
         }
     }
 
-    private void extractNgramsFromAltText() {
-        for (int k = START; k < END; k += STEP) {
-            List<CrawledImage> list = dao.findRange(k, STEP);
-            for (CrawledImage i : list) {
-                if(i.alt!=null) {
-                    try {
-                        extractNGrams(i.alt);
-                    } catch (Exception e) {
-                        System.out.println(e);
-                    }
-                }
-            }
-        }
-    }
 
     public static void processURL(String s) {
+        try {
+            s = URLDecoder.decode(s, "UTF-8");
+        }catch(UnsupportedEncodingException uee){
+            System.out.println("Wrong encoding "+uee);
+        }
         //System.out.println("** " + s);
         int start = 0;
         if (s.startsWith("http"))
@@ -97,7 +89,21 @@ public class NGramAnalyzer {
                 System.out.println(ioe);
             }
         }
-        //System.out.println();
+    }
+
+    private void extractNgramsFromAltText() {
+        for (int k = START; k < END; k += STEP) {
+            List<CrawledImage> list = dao.findRange(k, STEP);
+            for (CrawledImage i : list) {
+                if (i.parentTxt != null) {
+                    try {
+                        extractNGrams(i.parentTxt);
+                    } catch (Exception e) {
+                        System.out.println(e);
+                    }
+                }
+            }
+        }
     }
 
     /**
@@ -115,7 +121,6 @@ public class NGramAnalyzer {
         while (gramTokenizer.incrementToken()) {
             String token = charTermAttribute.toString();
             NGRAM_FREQUENCIES.add(token);
-            //System.out.print(token + ',');
         }
 
         gramTokenizer.end();

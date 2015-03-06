@@ -32,9 +32,9 @@ public class CommonCrawlAnalyzer {
     public static void main(String[] args) throws Exception {
 
 
-        MorphiaManager.setup("commoncrawl2");
+        MorphiaManager.setup("cc_train");
         CommonCrawlAnalyzer a = new CommonCrawlAnalyzer();
-        a.readDomainsFromFile();
+        //a.readDomainsFromFile();
         long start = System.currentTimeMillis();
         a.analyzeCommonCrawlLocal();
         Statistics.printStatistics();
@@ -109,7 +109,7 @@ public class CommonCrawlAnalyzer {
                         service.printStatus();
                     }*/
                     ProcessingService.Result r = service.tryGetResult();
-                    while (r != null) {
+                    while (r!=null) {
                         //System.out.println("Image url: " + r.url);
                         // System.out.println("Content length: " + r.contentLength);
                         //System.out.println("Content type: " + r.contentType);
@@ -140,8 +140,8 @@ public class CommonCrawlAnalyzer {
 
 
     protected void analyzeCommonCrawlLocal() throws IOException {
-        //File file = new File("/home/kandreadou/Documents/todo/");
-        File file = new File("/home/kandreadou/Music/commoncrawl/July2014_3101_10000/output9701/");
+        //FILE FOR TRAINING
+        File file = new File("/home/kandreadou/Music/commoncrawl/July2014_40001_end/output41001/");
         readRecursivelyInLocalFolder(file);
         service.shutDown();
     }

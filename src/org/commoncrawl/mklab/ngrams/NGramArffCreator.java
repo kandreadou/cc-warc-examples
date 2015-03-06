@@ -25,11 +25,11 @@ public class NGramArffCreator {
 
     private final static int STEP = 10000;
     private final static int START = 0;
-    private final static int END = 500001;
-    private final static int NUM_NGRAMS = 1000;
+    private final static int END = 500000;
+    private final static int NUM_NGRAMS = 10000;
     private final static String[] NGRAMS = new String[NUM_NGRAMS];
-    private final static String NGRAMS_FILE = "/home/kandreadou/Documents/commoncrawlstuff/ngrams_alt/ngramsalt.txt";
-    private final static String ARFF_FILE = "/home/kandreadou/Documents/commoncrawlstuff/independent_testing/url.arff";
+    private final static String NGRAMS_FILE = "/home/kandreadou/Documents/commoncrawlstuff/training_data/ngrams_url.txt";
+    private final static String ARFF_FILE = "/home/kandreadou/Documents/commoncrawlstuff/training_data/ngrams_url_train.arff";
 
     public static void main(String[] args) throws Exception {
         NGramArffCreator n = new NGramArffCreator();
@@ -43,30 +43,6 @@ public class NGramArffCreator {
     private boolean isBig2(CrawledImage i) throws IOException {
 
         Dimension d = FilenameAnalyzer.readFromFilewithImageReader(new File(FilenameAnalyzer.DOWNLOAD_FOLDER2 + i.filename));
-        return d.getWidth() > 400 && d.getHeight() > 400;
-    }
-
-    private boolean isBig(CrawledImage i) throws IOException {
-        //String imageName = "http://1.bp.blogspot.com/-0VJWooYsJHg/TbrdBv-FTAI/AAAAAAAACEM/drbz1_drAr8/s320/jf+jonah+peacock.bmp";
-        //String imName = FilenameAnalyzer.getImageName(imageName);
-        String imName = FilenameAnalyzer.getImageName(i.normalizedSrc);
-        String suffix = FilenameAnalyzer.getSuffix(imName);
-        if ("jpg".equalsIgnoreCase(suffix) || (!"png".equalsIgnoreCase(suffix) && !"bmp".equalsIgnoreCase(suffix) && !"tiff".equalsIgnoreCase(suffix) && !"gif".equalsIgnoreCase(suffix)))
-            suffix = "jpeg";
-        Dimension d;
-        try {
-            d = FilenameAnalyzer.readFromFilewithImageReader(new File(FilenameAnalyzer.DOWNLOAD_FOLDER + i.id + "." + suffix));
-        } catch (FileNotFoundException fnf) {
-            try {
-                d = FilenameAnalyzer.readFromFilewithImageReader(new File(FilenameAnalyzer.DOWNLOAD_FOLDER + i.id + ".jpeg"));
-            } catch (FileNotFoundException f) {
-                try {
-                    d = FilenameAnalyzer.readFromFilewithImageReader(new File(FilenameAnalyzer.DOWNLOAD_FOLDER + i.id + ".png"));
-                } catch (FileNotFoundException f1) {
-                    d = FilenameAnalyzer.readFromFilewithImageReader(new File(FilenameAnalyzer.DOWNLOAD_FOLDER + i.id + ".gif"));
-                }
-            }
-        }
         return d.getWidth() > 400 && d.getHeight() > 400;
     }
 
@@ -93,10 +69,10 @@ public class NGramArffCreator {
         bw.newLine();
         bw.newLine();
         for (int i = 0; i < NUM_NGRAMS; i++) {
-            bw.write("@attribute ngram" + i + " {false, true}");
+            bw.write("@attribute ngram numeric");
             bw.newLine();
         }
-        bw.write("@attribute class {small, big}");
+        bw.write("@attribute class {'SMALL','BIG'}");
         bw.newLine();
         bw.newLine();
         bw.write("@data");
@@ -110,9 +86,9 @@ public class NGramArffCreator {
                     boolean[] ngramVector = getNGramVector(i);
                     boolean isBig = isBig2(i);
                     for (boolean b : ngramVector) {
-                        bw.write(String.valueOf(b) + ',');
+                        bw.write(String.valueOf(b ? 1 : 0) + ',');
                     }
-                    bw.write(isBig ? "big" : "small");
+                    bw.write(isBig ? "BIG" : "SMALL");
                     bw.newLine();
                 } catch (IOException ioe) {
                     System.out.println(ioe);
@@ -209,5 +185,4 @@ public class NGramArffCreator {
         }
         return ngrams;
     }
-
 }
