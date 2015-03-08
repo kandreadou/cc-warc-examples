@@ -19,13 +19,15 @@ import java.util.Set;
  */
 public class NGramArffCreator extends IArffCreator {
 
-    private final static int NUM_NGRAMS = 1000;
-    private final static String[] NGRAMS = new String[NUM_NGRAMS];
-    private final static String NGRAMS_FILE = "/home/kandreadou/Documents/commoncrawlstuff/training_data/ngrams_url.txt";
+    private final int NUM_NGRAMS;
+    private final String[] NGRAMS;
+    private final static String NGRAMS_FILE = "/home/kandreadou/Documents/commoncrawlstuff/ngrams_freq_url.txt";
 
 
-    public NGramArffCreator(String filename) throws IOException {
+    public NGramArffCreator(String filename, int numNgrams) throws IOException {
         super(filename);
+        NUM_NGRAMS = numNgrams;
+        NGRAMS = new String[NUM_NGRAMS];
     }
 
     @Override

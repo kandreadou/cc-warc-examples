@@ -19,7 +19,6 @@ public abstract class IArffCreator {
         File arffFile = new File(filename);
         fw = new FileWriter(arffFile.getAbsoluteFile());
         bw = new BufferedWriter(fw);
-        initialize();
     }
 
     public abstract void initialize() throws IOException;

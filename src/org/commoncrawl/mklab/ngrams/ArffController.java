@@ -21,36 +21,46 @@ import java.util.List;
  */
 public class ArffController {
 
-    public final static String DOWNLOAD_FOLDER = "/media/kandreadou/New Volume/Pics2/";
-    private final static int STEP = 1000;
-    private final static int START = 100000;
-    private final static int END = 200000;
-    private final static int MAX_BIG = 5000;
-    private final static int MAX_SMALL = 5000;
+    public final static String DOWNLOAD_FOLDER = "/media/kandreadou/New Volume/Pics_train/";
+    private final static int STEP = 10000;
+    private final static int START = 0;
+    private final static int END = 4640038;
+    //private final static int MAX_BIG = 5000;
+    //private final static int MAX_SMALL = 5000;
 
     private static int NUM_BIG = 0;
     private static int NUM_SMALL = 0;
     private static final List<IArffCreator> creators = new ArrayList<IArffCreator>();
 
     public static void main(String[] args) throws Exception {
-        MorphiaManager.setup("commoncrawl2");
-        NGramArffCreator n = new NGramArffCreator("/home/kandreadou/Documents/commoncrawlstuff/training_data/ngrams_url_test1.arff");
-        FeaturesArffCreator f = new FeaturesArffCreator("/home/kandreadou/Documents/commoncrawlstuff/training_data/features_test1.arff");
-        creators.add(n);
+        MorphiaManager.setup("cc_train");
+        NGramArffCreator n1000 = new NGramArffCreator("/home/kandreadou/Documents/commoncrawlstuff/ngrams_url_train_1000.arff", 1000);
+        NGramArffCreator n2000 = new NGramArffCreator("/home/kandreadou/Documents/commoncrawlstuff/ngrams_url_train_2000.arff", 2000);
+        NGramArffCreator n5000 = new NGramArffCreator("/home/kandreadou/Documents/commoncrawlstuff/ngrams_url_train_5000.arff", 5000);
+        FeaturesArffCreator f = new FeaturesArffCreator("/home/kandreadou/Documents/commoncrawlstuff/features_train.arff");
+        creators.add(n1000);
+        creators.add(n2000);
+        creators.add(n5000);
         creators.add(f);
+        for (IArffCreator c : creators) {
+            c.initialize();
+        }
         ImageDAO dao = new ImageDAO();
         for (int k = START; k < END; k += STEP) {
+            //if (NUM_SMALL > MAX_SMALL && NUM_BIG > MAX_BIG)
+            //break;
             System.out.println("K= " + k);
+            System.out.println("SMALL " + NUM_SMALL + " BIG " + NUM_BIG);
             List<CrawledImage> list = dao.findRange(k, STEP);
             for (CrawledImage i : list) {
                 try {
-                    if (NUM_SMALL > MAX_SMALL && NUM_BIG > MAX_BIG)
-                        break;
+                    //if (NUM_SMALL > MAX_SMALL && NUM_BIG > MAX_BIG)
+                    //break;
                     boolean isSmall = false;
                     boolean isBig = false;
                     Dimension dim = readFromFilewithImageReader(new File(DOWNLOAD_FOLDER + i.filename));
                     if (dim == null)
-                        break;
+                        continue;
                     else {
                         double w = dim.getWidth();
                         double h = dim.getHeight();
@@ -60,16 +70,18 @@ public class ArffController {
                             isBig = true;
                         if (!isSmall && !isBig)
                             continue;
-                        if (isSmall && NUM_SMALL > MAX_SMALL)
+                        /*if (isSmall && NUM_SMALL > MAX_SMALL)
                             continue;
                         else if (isBig && NUM_BIG > MAX_BIG)
+                            continue;*/
+                        if (isSmall && NUM_SMALL > NUM_BIG)
                             continue;
                         else {
                             if (isSmall)
                                 NUM_SMALL++;
                             else
                                 NUM_BIG++;
-                            System.out.println("SMALL " + NUM_SMALL + " BIG " + NUM_BIG);
+
                         }
                     }
                     for (IArffCreator c : creators) {

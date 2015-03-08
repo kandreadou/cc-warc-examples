@@ -23,13 +23,13 @@ public class NGramAnalyzer {
     private final ImageDAO dao = new ImageDAO();
     private final static int STEP = 10000;
     private final static int START = 0;
-    private final static int END = 500000;
+    private final static int END = 2000000;
 
     public static Multiset<String> NGRAM_FREQUENCIES = ConcurrentHashMultiset.create();
 
     public static void main(String[] args) throws Exception {
-        MorphiaManager.setup("commoncrawl2");
-        createNgramFile("/home/kandreadou/Documents/commoncrawlstuff/training_data/ngrams_url.txt");
+        MorphiaManager.setup("cc_train");
+        createNgramFile("/home/kandreadou/Documents/commoncrawlstuff/ngrams_freq_url.txt");
         MorphiaManager.tearDown();
     }
 
@@ -46,7 +46,7 @@ public class NGramAnalyzer {
                 Multisets.copyHighestCountFirst(NGRAM_FREQUENCIES).entrySet();
         PrintWriter writer = new PrintWriter(new BufferedWriter(new FileWriter(filename, false)));
         for (Multiset.Entry<String> s : multiset) {
-            if (s.getCount() < 50)
+            if (s.getCount() < 1000)
                 break;
             writer.println(s.getElement() + " " + s.getCount());
         }
@@ -55,6 +55,7 @@ public class NGramAnalyzer {
 
     private void extractNgramsFromURL() {
         for (int k = START; k < END; k += STEP) {
+            System.out.println(k);
             List<CrawledImage> list = dao.findRange(k, STEP);
             for (CrawledImage i : list) {
                 processURL(i.normalizedSrc);

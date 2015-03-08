@@ -161,7 +161,7 @@ public class FeaturesArffCreator extends IArffCreator {
             boolean found = matcher.find();
             while (found) {
                 String element = matcher.group();
-                System.out.println(element);
+                //System.out.println(element);
                 String[] dims = element.split("x");
                 if (dims.length > 1) {
                     dimensions[0] = Integer.parseInt(dims[0]);
