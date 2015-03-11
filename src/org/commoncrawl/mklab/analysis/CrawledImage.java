@@ -28,4 +28,7 @@ public class CrawledImage {
     public String alt, pageUrl, parentTxt, domElem;
     public int domSib, domDepth;
     public String filename;
+    public int w,h;
+    public boolean isBig = false;
+    public boolean isSmall = false;
 }

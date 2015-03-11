@@ -50,7 +50,7 @@ public class ProcessingService {
     private static Pattern youtubePattern = Pattern.compile("https*://www.youtube.com/watch?.*v=([a-zA-Z0-9_\\-]+)(&.+=.+)*");
     private static Pattern vimeoPattern = Pattern.compile("https*://vimeo.com/([0-9]+)/*$");
     private static Pattern dailymotionPattern = Pattern.compile("https*://www.dailymotion.com/video/([A-Za-z0-9]+)_.*$");
-    private final static String DOWNLOAD_FOLDER = "/media/kandreadou/New Volume/Pics_train/";
+    private final static String DOWNLOAD_FOLDER = "/media/kandreadou/New Volume/Pics_test/";
     private static final int MIN_CALL_INTERVAL = 250;
 
     private int numPendingTasks;
@@ -259,7 +259,7 @@ public class ProcessingService {
 
         protected void download(URL imgurl) {
 
-            System.out.println(imgurl.toString());
+            //System.out.println(imgurl.toString());
 
             //GetMethod method = new GetMethod(imgurl.toString());
             //method.setFollowRedirects(true);

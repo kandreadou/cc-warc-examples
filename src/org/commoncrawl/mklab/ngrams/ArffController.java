@@ -21,7 +21,7 @@ import java.util.List;
  */
 public class ArffController {
 
-    public final static String DOWNLOAD_FOLDER = "/media/kandreadou/New Volume/Pics_train/";
+    public final static String DOWNLOAD_FOLDER = "/media/kandreadou/New Volume/Pics_test/";
     private final static int STEP = 10000;
     private final static int START = 0;
     private final static int END = 4640038;
@@ -33,11 +33,11 @@ public class ArffController {
     private static final List<IArffCreator> creators = new ArrayList<IArffCreator>();
 
     public static void main(String[] args) throws Exception {
-        MorphiaManager.setup("cc_train");
-        NGramArffCreator n1000 = new NGramArffCreator("/home/kandreadou/Documents/commoncrawlstuff/ngrams_url_train_1000.arff", 1000);
-        NGramArffCreator n2000 = new NGramArffCreator("/home/kandreadou/Documents/commoncrawlstuff/ngrams_url_train_2000.arff", 2000);
-        NGramArffCreator n5000 = new NGramArffCreator("/home/kandreadou/Documents/commoncrawlstuff/ngrams_url_train_5000.arff", 5000);
-        FeaturesArffCreator f = new FeaturesArffCreator("/home/kandreadou/Documents/commoncrawlstuff/features_train.arff");
+        MorphiaManager.setup("cc_test");
+        NGramArffCreator n1000 = new NGramArffCreator("/home/kandreadou/Documents/commoncrawlstuff/ngrams_url_test_1000.arff", 1000);
+        NGramArffCreator n2000 = new NGramArffCreator("/home/kandreadou/Documents/commoncrawlstuff/ngrams_url_test_2000.arff", 2000);
+        NGramArffCreator n5000 = new NGramArffCreator("/home/kandreadou/Documents/commoncrawlstuff/ngrams_url_test_5000.arff", 5000);
+        FeaturesArffCreator f = new FeaturesArffCreator("/home/kandreadou/Documents/commoncrawlstuff/features_test.arff");
         creators.add(n1000);
         creators.add(n2000);
         creators.add(n5000);
