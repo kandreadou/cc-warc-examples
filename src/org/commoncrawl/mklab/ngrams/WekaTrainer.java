@@ -1,5 +1,6 @@
 package org.commoncrawl.mklab.ngrams;
 
+import weka.classifiers.evaluation.Evaluation;
 import weka.classifiers.trees.RandomForest;
 import weka.core.Instance;
 import weka.core.Instances;
@@ -16,13 +17,13 @@ public class WekaTrainer {
 
     public static void main(String[] args) throws Exception{
         WekaTrainer t = new WekaTrainer();
-        t.train();
+        t.test();
     }
 
     public void train() throws Exception{
         System.out.println("Starting");
-        //ConverterUtils.DataSource source = new ConverterUtils.DataSource("/home/kandreadou/Documents/commoncrawlstuff/ngrams_url_train_2000_sparse.arff");
-        ConverterUtils.DataSource source = new ConverterUtils.DataSource("/home/iti-310/classification/ngrams_url_train_2000_sparse.arff");
+        //ConverterUtils.DataSource source = new ConverterUtils.DataSource("/home/kandreadou/Documents/commoncrawlstuff/ngrams_tfidf_test_1000.arff");
+        ConverterUtils.DataSource source = new ConverterUtils.DataSource("/home/iti-310/classification/ngrams_tfidf_train_2000.arff");
         Instances structure = source.getDataSet();
         //ArffLoader loader = new ArffLoader();
         //loader.setFile(new File("/home/kandreadou/Documents/commoncrawlstuff/features_train.arff"));
@@ -33,15 +34,35 @@ public class WekaTrainer {
         rf.setMaxDepth(0);
         rf.setNumExecutionSlots(8);
         rf.setNumFeatures(0);
-        rf.setNumTrees(30);
+        rf.setNumTrees(100);
         rf.setPrintTrees(false);
         rf.setSeed(1);
         rf.setDebug(false);
         System.out.println("Before build");
         rf.buildClassifier(structure);
         System.out.println("After build");
-        //weka.core.SerializationHelper.write("/home/kandreadou/Documents/commoncrawlstuff/models/grams2000_10trees.model", rf);
-        weka.core.SerializationHelper.write("/home/iti-310/classification/grams2000_30trees.model", rf);
+        //weka.core.SerializationHelper.write("/home/kandreadou/Documents/commoncrawlstuff/models/tfidf_1000_10trees.model", rf);
+        weka.core.SerializationHelper.write("/home/iti-310/classification/tfidf_2000_100trees.model", rf);
+    }
+
+    public void test() throws Exception {
+
+        FileInputStream fis = new FileInputStream("/home/kandreadou/Documents/commoncrawlstuff/models/tfidf_2000_100trees.model");
+        ObjectInputStream ois = new ObjectInputStream(fis);
+
+        RandomForest  rf = (RandomForest) ois.readObject();
+        ois.close();
+
+        ConverterUtils.DataSource source = new ConverterUtils.DataSource("/home/kandreadou/Documents/commoncrawlstuff/ngrams_tfidf_test_2000.arff");
+        Instances structure = source.getDataSet();
+        structure.setClassIndex(structure.numAttributes() - 1);
+
+        Evaluation eval = new Evaluation(structure);
+        eval.evaluateModel(rf,structure);
+        System.out.println("Small precision "+eval.precision(0)+" recall "+eval.recall(0) );
+        System.out.println("Big precision "+eval.precision(1)+" recall "+eval.recall(1) );
+        System.out.println("Small F1 "+eval.fMeasure(0)+" Big F1 "+eval.fMeasure(1) );
+        System.out.println(eval.toSummaryString("\nResults\n======\n", false));
     }
 
     public void createSparse() throws Exception{

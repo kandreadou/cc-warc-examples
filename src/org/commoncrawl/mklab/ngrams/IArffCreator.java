@@ -15,6 +15,10 @@ public abstract class IArffCreator {
     protected FileWriter fw;
     protected BufferedWriter bw;
 
+    public IArffCreator(){
+
+    }
+
     public IArffCreator(String filename) throws IOException {
         File arffFile = new File(filename);
         fw = new FileWriter(arffFile.getAbsoluteFile());

@@ -32,7 +32,7 @@ public class CommonCrawlAnalyzer {
     public static void main(String[] args) throws Exception {
 
 
-        MorphiaManager.setup("cc_test");
+        MorphiaManager.setup("cc_combine");
         CommonCrawlAnalyzer a = new CommonCrawlAnalyzer();
         //a.readDomainsFromFile();
         long start = System.currentTimeMillis();
@@ -143,7 +143,9 @@ public class CommonCrawlAnalyzer {
         //FILE FOR TRAINING
         //File file = new File("/home/kandreadou/Music/commoncrawl/July2014_40001_end/output41001/");
         //FILE FOR TESTING
-        File file = new File("/home/kandreadou/Music/commoncrawl/July2014_40001_end/output55501/");
+        //File file = new File("/home/kandreadou/Music/commoncrawl/July2014_40001_end/output55501/");
+        //FILE FOR COMBINED APPROACH
+        File file = new File("/home/kandreadou/Music/commoncrawl/July2014_40001_end/output49001/");
         readRecursivelyInLocalFolder(file);
         service.shutDown();
     }

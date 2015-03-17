@@ -12,7 +12,10 @@ import org.commoncrawl.mklab.analysis.MorphiaManager;
 import java.awt.*;
 import java.io.*;
 import java.net.URLDecoder;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 /**
  * Created by kandreadou on 3/11/15.
@@ -36,23 +39,177 @@ public class NgamFeatureSelection {
     public static void main(String[] args) throws Exception {
         MorphiaManager.setup("cc_train");
         NgamFeatureSelection a = new NgamFeatureSelection();
-        a.createNgramFile("/home/kandreadou/Documents/commoncrawlstuff/ngrams_freq_url_big.txt", "/home/kandreadou/Documents/commoncrawlstuff/ngrams_freq_url_small.txt");
+        a.createTfIdf("/home/kandreadou/Documents/commoncrawlstuff/ngrams_freq_url_big1.txt", "/home/kandreadou/Documents/commoncrawlstuff/ngrams_freq_url_small1.txt");
+        //a.createFinalFrequencies("/home/kandreadou/Documents/commoncrawlstuff/ngrams_freq_url_big1.txt", "/home/kandreadou/Documents/commoncrawlstuff/ngrams_freq_url_small1.txt");
+        //a.createNgramFile("/home/kandreadou/Documents/commoncrawlstuff/ngrams_freq_url_big1.txt", "/home/kandreadou/Documents/commoncrawlstuff/ngrams_freq_url_small1.txt");
         MorphiaManager.tearDown();
     }
 
     ///////////////////////////////////////////////////////
-    //////////////// NGRAM FILE SECTION   /////////////////
+    //////////////// CREATE THE FINAL FILE  ///////////////
+    ///////////////////////////////////////////////////////
+
+    private void createTfIdf(String fileBig, String fileSmall) throws Exception {
+        Multiset<String> big = ConcurrentHashMultiset.create();
+        Multiset<String> small = ConcurrentHashMultiset.create();
+
+        readNgramsFromFile(fileBig, true);
+        readNgramsFromFile(fileSmall, false);
+
+        //big
+        for (Multiset.Entry<String> entry : NGRAM_BIG_FREQUENCIES.entrySet()) {
+            String element = entry.getElement();
+            int bigCount = entry.getCount();
+            if (bigCount < 500)
+                continue;
+            //System.out.println("Entry " + element + " count " + bigCount);
+            if (NGRAM_SMALL_FREQUENCIES.contains(element)) {
+                int smallCount = NGRAM_SMALL_FREQUENCIES.count(element);
+                int score = (int) ((Math.pow(bigCount, 2) - Math.pow(smallCount, 2)) / (bigCount));
+                //System.out.println("Small count " + smallCount + " score " + score);
+                if (score > 0)
+                    big.add(element, score);
+            } else if (bigCount > 3000)
+                big.add(element, 1000);
+        }
+
+        //small
+        for (Multiset.Entry<String> entry : NGRAM_SMALL_FREQUENCIES.entrySet()) {
+            String element = entry.getElement();
+            int bigCount = entry.getCount();
+            if (bigCount < 500)
+                continue;
+            //System.out.println("Entry " + element + " count " + bigCount);
+            if (NGRAM_BIG_FREQUENCIES.contains(element)) {
+                int smallCount = NGRAM_BIG_FREQUENCIES.count(element);
+                int score = (int) ((Math.pow(bigCount, 2) - Math.pow(smallCount, 2)) / (bigCount));
+                //System.out.println("Small count " + smallCount + " score " + score);
+                if (score > 0)
+                    small.add(element, score);
+            } else if (bigCount > 3000)
+                small.add(element, 1000);
+        }
+
+        Iterable<Multiset.Entry<String>> bigmultiset =
+                Multisets.copyHighestCountFirst(big).entrySet();
+        Iterable<Multiset.Entry<String>> smallmultiset =
+                Multisets.copyHighestCountFirst(small).entrySet();
+        PrintWriter writer = new PrintWriter(new BufferedWriter(new FileWriter("/home/kandreadou/Documents/commoncrawlstuff/ngrams_tfidf_1000_beta.txt", false)));
+        int count = 0;
+        for (Multiset.Entry<String> s : bigmultiset) {
+            if (count >= 500)
+                break;
+            System.out.println(s.getElement() + " " + s.getCount());
+            writer.println(s.getElement() + " " + s.getCount());
+            count++;
+        }
+        count = 0;
+        for (Multiset.Entry<String> s : smallmultiset) {
+            if (count >= 500)
+                break;
+            System.out.println(s.getElement() + " " + s.getCount());
+            writer.println(s.getElement() + " " + s.getCount());
+            count++;
+        }
+        writer.close();
+    }
+
+    private void createFinalFrequencies(String fileBig, String fileSmall) throws Exception {
+        Multiset<String> big = ConcurrentHashMultiset.create();
+        Multiset<String> small = ConcurrentHashMultiset.create();
+
+        readNgramsFromFile(fileBig, true);
+        readNgramsFromFile(fileSmall, false);
+
+        //big
+        for (Multiset.Entry<String> entry : NGRAM_BIG_FREQUENCIES.entrySet()) {
+            String element = entry.getElement();
+            int bigCount = entry.getCount();
+            //System.out.println("Entry " + element + " count " + bigCount);
+            if (NGRAM_SMALL_FREQUENCIES.contains(element)) {
+                int smallCount = NGRAM_SMALL_FREQUENCIES.count(element);
+                int score = bigCount - smallCount;
+                //System.out.println("Small count " + smallCount + " score " + score);
+                if (score > 0)
+                    big.add(element, score);
+            } else
+                big.add(element, bigCount);
+        }
+
+        //small
+        for (Multiset.Entry<String> entry : NGRAM_SMALL_FREQUENCIES.entrySet()) {
+            String element = entry.getElement();
+            int bigCount = entry.getCount();
+            //System.out.println("Entry " + element + " count " + bigCount);
+            if (NGRAM_BIG_FREQUENCIES.contains(element)) {
+                int smallCount = NGRAM_BIG_FREQUENCIES.count(element);
+                int score = bigCount - smallCount;
+                //System.out.println("Small count " + smallCount + " score " + score);
+                if (score > 0)
+                    small.add(element, score);
+            } else
+                small.add(element, bigCount);
+        }
+
+        Iterable<Multiset.Entry<String>> bigmultiset =
+                Multisets.copyHighestCountFirst(big).entrySet();
+        Iterable<Multiset.Entry<String>> smallmultiset =
+                Multisets.copyHighestCountFirst(small).entrySet();
+        PrintWriter writer = new PrintWriter(new BufferedWriter(new FileWriter("/home/kandreadou/Documents/commoncrawlstuff/ngrams_scores_5000.txt", false)));
+        int count = 0;
+        for (Multiset.Entry<String> s : bigmultiset) {
+            if (count >= 2500)
+                break;
+            System.out.println(s.getElement() + " " + s.getCount());
+            writer.println(s.getElement() + " " + s.getCount());
+            count++;
+        }
+        count = 0;
+        for (Multiset.Entry<String> s : smallmultiset) {
+            if (count >= 2500)
+                break;
+            System.out.println(s.getElement() + " " + s.getCount());
+            writer.println(s.getElement() + " " + s.getCount());
+            count++;
+        }
+        writer.close();
+    }
+
+
+    private void readNgramsFromFile(String file, boolean isBig) throws IOException {
+        BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(file)));
+        String line = reader.readLine();
+        while (line != null) {
+            line = line.trim();
+            int lastSpace = line.lastIndexOf(' ');
+            if (lastSpace > 0) {
+                String frequency = line.substring(lastSpace + 1);
+                String element = line.substring(0, lastSpace);
+                if (isBig)
+                    NGRAM_BIG_FREQUENCIES.add(element, Integer.parseInt(frequency));
+                else
+                    NGRAM_SMALL_FREQUENCIES.add(element, Integer.parseInt(frequency));
+            }
+            line = reader.readLine();
+        }
+        reader.close();
+        reader = null;
+
+    }
+
+    ///////////////////////////////////////////////////////
+    //////////////// CREATE THE PRELIMINARY FILES  ////////
     ///////////////////////////////////////////////////////
 
     private void createNgramFile(String filename1, String filename2) throws IOException {
 
-        extractNgramsFromURL();
+        extractNgramsFromURLNoFiles();
 
         Iterable<Multiset.Entry<String>> multiset =
                 Multisets.copyHighestCountFirst(NGRAM_BIG_FREQUENCIES).entrySet();
         PrintWriter writer = new PrintWriter(new BufferedWriter(new FileWriter(filename1, false)));
         for (Multiset.Entry<String> s : multiset) {
-            if (s.getCount() < 1000)
+            if (s.getCount() < 50)
                 break;
             writer.println(s.getElement() + " " + s.getCount());
         }
@@ -62,17 +219,41 @@ public class NgamFeatureSelection {
                 Multisets.copyHighestCountFirst(NGRAM_SMALL_FREQUENCIES).entrySet();
         PrintWriter writer2 = new PrintWriter(new BufferedWriter(new FileWriter(filename2, false)));
         for (Multiset.Entry<String> s : multiset2) {
-            if (s.getCount() < 1000)
+            if (s.getCount() < 50)
                 break;
             writer2.println(s.getElement() + " " + s.getCount());
         }
         writer2.close();
     }
 
+    private void extractNgramsFromURLNoFiles() {
+        for (int k = START; k < END; k += STEP) {
+            System.out.println(k);
+            System.out.println("BIG " + NUM_BIG + " SMALL " + NUM_SMALL);
+            List<CrawledImage> list = dao.findRange(k, STEP);
+            for (CrawledImage i : list) {
+
+                //System.out.println("ID "+i.id);
+                if (!i.isSmall && !i.isBig)
+                    continue;
+                if (i.isSmall && NUM_SMALL > NUM_BIG)
+                    continue;
+                else {
+                    if (i.isSmall)
+                        NUM_SMALL++;
+                    else
+                        NUM_BIG++;
+                }
+                processURL(i.normalizedSrc, i.isBig);
+            }
+        }
+    }
+
+
     private void extractNgramsFromURL() {
         for (int k = START; k < END; k += STEP) {
             System.out.println(k);
-            System.out.println("BIG "+NUM_BIG+" SMALL "+NUM_SMALL);
+            System.out.println("BIG " + NUM_BIG + " SMALL " + NUM_SMALL);
             List<CrawledImage> list = dao.findRange(k, STEP);
             for (CrawledImage i : list) {
                 //System.out.println("ID "+i.id);
@@ -150,7 +331,7 @@ public class NgamFeatureSelection {
 
         while (gramTokenizer.incrementToken()) {
             String token = charTermAttribute.toString();
-            if(isBig)
+            if (isBig)
                 NGRAM_BIG_FREQUENCIES.add(token);
             else
                 NGRAM_SMALL_FREQUENCIES.add(token);
