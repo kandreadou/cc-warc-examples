@@ -24,7 +24,7 @@ public class ArffController {
     public final static String DOWNLOAD_FOLDER = "/media/kandreadou/New Volume/Pics_test/";
     private final static int STEP = 10000;
     private final static int START = 0;
-    private final static int END = 1684711;
+    private final static int END = 1700000;
     //private final static int MAX_BIG = 5000;
     //private final static int MAX_SMALL = 5000;
 
@@ -38,8 +38,8 @@ public class ArffController {
         //NGramArffCreator n2000 = new NGramArffCreator("/home/kandreadou/Documents/commoncrawlstuff/ngrams_url_test_2000.arff", 2000);
         //NGramArffCreator n5000 = new NGramArffCreator("/home/kandreadou/Documents/commoncrawlstuff/ngrams_url_test_5000.arff", 5000);
         //FeaturesArffCreator f = new FeaturesArffCreator("/home/kandreadou/Documents/commoncrawlstuff/features_test.arff");
-        //ScoreNgramArffCreator n1000 = new ScoreNgramArffCreator("/home/kandreadou/Documents/commoncrawlstuff/ngrams_tfidf_test_1000.arff", 1000, "/home/kandreadou/Documents/commoncrawlstuff/ngrams_tfidf_1000.txt");
-        //ScoreNgramArffCreator n2000 = new ScoreNgramArffCreator("/home/kandreadou/Documents/commoncrawlstuff/ngrams_tfidf_test_2000.arff", 2000, "/home/kandreadou/Documents/commoncrawlstuff/ngrams_tfidf_2000.txt");
+        //ScoreNgramArffCreator n1000 = new ScoreNgramArffCreator("/home/kandreadou/Documents/commoncrawlstuff/new/test_1000.arff", 1000, "/home/kandreadou/Documents/commoncrawlstuff/new/ngrams1000b.txt");
+        //ScoreNgramArffCreator n2000 = new ScoreNgramArffCreator("/home/kandreadou/Documents/commoncrawlstuff/new/test_2000.arff", 2000, "/home/kandreadou/Documents/commoncrawlstuff/new/ngrams2000b.txt");
         //ScoreNgramArffCreator n5000 = new ScoreNgramArffCreator("/home/kandreadou/Documents/commoncrawlstuff/ngrams_score_test_5000.arff", 5000, "/home/kandreadou/Documents/commoncrawlstuff/ngrams_scores_5000.txt");
         //creators.add(n1000);
         //creators.add(n2000);
@@ -86,15 +86,15 @@ public class ArffController {
                             continue;
                         else
                             dao.save(i);
-                        if (i.isSmall && NUM_SMALL > NUM_BIG)
-                            continue;
-                        else {
+                        //if (i.isSmall && NUM_SMALL > NUM_BIG)
+                            //continue;
+                        //else {
                             if (i.isSmall)
                                 NUM_SMALL++;
                             else
                                 NUM_BIG++;
 
-                        }
+                        //}
                     }*/
                     for (IArffCreator c : creators) {
                         c.writeFeatureVector(i, i.isBig);

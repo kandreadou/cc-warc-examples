@@ -23,7 +23,7 @@ public class Statistics {
      * Expected number of insertions: 15 billion
      * False positive probability: default 3%
      */
-    public static BloomFilter<String> UNIQUE_URLS = BloomFilter.create(Funnels.stringFunnel(Charset.forName("UTF-8")), 15 * 1000 * 1000 * 1000);
+    public static BloomFilter<String> UNIQUE_URLS = BloomFilter.create(Funnels.stringFunnel(Charset.forName("UTF-8")), 5 * 1000 * 1000);
 
 
     /**

@@ -26,7 +26,8 @@ public class FakeArffCreator extends IArffCreator {
     @Override
     public void initialize() throws IOException {
         try {
-            FileInputStream fis = new FileInputStream("/home/kandreadou/Documents/commoncrawlstuff/models/tfidf_2000_100trees.model");
+            //FileInputStream fis = new FileInputStream("/home/kandreadou/Documents/commoncrawlstuff/models/tfidf_2000_100trees.model");
+            FileInputStream fis = new FileInputStream("/home/kandreadou/Documents/commoncrawlstuff/new/2000_10trees.model");
             ObjectInputStream ois = new ObjectInputStream(fis);
             ngramsClass = (RandomForest) ois.readObject();
             ois.close();
@@ -34,7 +35,8 @@ public class FakeArffCreator extends IArffCreator {
             ois = new ObjectInputStream(fis);
             featuresClass = (RandomForest) ois.readObject();
             ois.close();
-            ngramsExtractor = new ScoreNgramArffCreator("/home/kandreadou/Documents/commoncrawlstuff/junk.txt", 2000, "/home/kandreadou/Documents/commoncrawlstuff/ngrams_tfidf_2000.txt");
+            //ngramsExtractor = new ScoreNgramArffCreator("/home/kandreadou/Documents/commoncrawlstuff/junk.txt", 2000, "/home/kandreadou/Documents/commoncrawlstuff/ngrams_tfidf_2000.txt");
+            ngramsExtractor = new ScoreNgramArffCreator("/home/kandreadou/Documents/commoncrawlstuff/junk.txt", 2000, "/home/kandreadou/Documents/commoncrawlstuff/new/ngrams2000b.txt");
             ngramsExtractor.readNgramsFromFile();
         } catch (ClassNotFoundException cnf) {
             System.out.println(cnf);
@@ -78,7 +80,7 @@ public class FakeArffCreator extends IArffCreator {
                     System.out.println("d1 " + d1[0] + " " + d1[1]);
                     double[] d2 = featuresClass.distributionForInstance(feature);
                     System.out.println("d2 " + d2[0] + " " + d2[1]);
-                    if (Math.abs(d1[0] - d1[1]) + 0.15 > Math.abs(d2[0] - d2[1]) )
+                    if (Math.abs(d1[0] - d1[1]) + 0.1 > Math.abs(d2[0] - d2[1]) )
                         isBig = c1 == 1;
                     else
                         isBig = c2 == 1;

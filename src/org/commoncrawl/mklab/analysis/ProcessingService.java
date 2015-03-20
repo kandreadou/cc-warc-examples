@@ -13,13 +13,14 @@ import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
 import org.apache.http.protocol.HTTP;
 import org.bson.types.ObjectId;
+import org.commoncrawl.mklab.ngrams.FeaturesArffCreator;
+import org.commoncrawl.mklab.ngrams.ScoreNgramArffCreator;
+import weka.classifiers.trees.RandomForest;
+import weka.core.*;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.InputStream;
+import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -28,7 +29,9 @@ import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.*;
 import java.util.regex.Pattern;
@@ -38,7 +41,7 @@ import java.util.regex.Pattern;
  */
 public class ProcessingService {
 
-    private static final int NUM_DOWNLOAD_THREADS = 1000;
+    private static final int NUM_DOWNLOAD_THREADS = 100;
     private static final int MAX_NUM_PENDING_TASKS = 10 * NUM_DOWNLOAD_THREADS;
     private static final int CONNECTION_TIMEOUT = 1000; // in millis
     private static final int READ_TIMEOUT = 1000; // in millis
@@ -50,8 +53,8 @@ public class ProcessingService {
     private static Pattern youtubePattern = Pattern.compile("https*://www.youtube.com/watch?.*v=([a-zA-Z0-9_\\-]+)(&.+=.+)*");
     private static Pattern vimeoPattern = Pattern.compile("https*://vimeo.com/([0-9]+)/*$");
     private static Pattern dailymotionPattern = Pattern.compile("https*://www.dailymotion.com/video/([A-Za-z0-9]+)_.*$");
-    private final static String DOWNLOAD_FOLDER = "/media/kandreadou/New Volume/Pics_combine/";
-    private static final int MIN_CALL_INTERVAL = 250;
+    private final static String DOWNLOAD_FOLDER = "/media/kandreadou/New Volume/Pics_benchmark/";
+    private static final int MIN_CALL_INTERVAL = 150;
 
     private int numPendingTasks;
     private long lastDownLoadCall = 0;
@@ -59,6 +62,12 @@ public class ProcessingService {
     private MediaDAO<Image> imageDAO;
 
     private MessageDigest md;
+
+    private RandomForest featuresClass;
+    private RandomForest ngramsClass;
+    private ScoreNgramArffCreator ngramsExtractor;
+    private Instances featureData;
+    private Instances ngramData;
 
     public ProcessingService() {
         //IndexingManage.getInstance();
@@ -75,6 +84,24 @@ public class ProcessingService {
         } catch (NoSuchAlgorithmException nae) {
             System.out.println(nae);
         }
+
+        try {
+            FileInputStream fis = new FileInputStream("/home/kandreadou/Documents/commoncrawlstuff/models/tfidf_2000_100trees.model");
+            ObjectInputStream ois = new ObjectInputStream(fis);
+            ngramsClass = (RandomForest) ois.readObject();
+            ois.close();
+            fis = new FileInputStream("/home/kandreadou/Documents/commoncrawlstuff/models/features_30trees.model");
+            ois = new ObjectInputStream(fis);
+            featuresClass = (RandomForest) ois.readObject();
+            ois.close();
+            ngramsExtractor = new ScoreNgramArffCreator("/home/kandreadou/Documents/commoncrawlstuff/junk.txt", 2000, "/home/kandreadou/Documents/commoncrawlstuff/ngrams_tfidf_2000.txt");
+            ngramsExtractor.readNgramsFromFile();
+            featureData = createFeatureData();
+            ngramData = createNGramData();
+        } catch (Exception cnf) {
+            System.out.println(cnf);
+        }
+
 
     }
 
@@ -128,6 +155,9 @@ public class ProcessingService {
         }
     }
 
+    private static int index =0;
+    private static long duration = 0;
+
     class Download implements Callable<Result> {
 
         private String imageUrl;
@@ -152,7 +182,7 @@ public class ProcessingService {
 
         }
 
-        protected void process() {
+        protected synchronized void process() {
             //If the URL is unique
             boolean isUnique = false;
             synchronized (Statistics.UNIQUE_URLS) {
@@ -162,6 +192,43 @@ public class ProcessingService {
                 Statistics.GLOBAL_COUNT++;
                 try {
                     URL page = new URL(imageUrl);
+                    long start = System.currentTimeMillis();
+                    double[] featureVector = getFeatureVector(image);
+                    featureData.add(new DenseInstance(1, featureVector));
+                    double[] ngramVector = getngramvec(image);
+                    ngramData.add(new SparseInstance(1, ngramVector));
+
+                    Instance n = ngramData.get(index);
+                    Instance f = featureData.get(index);
+
+                    double c1 = ngramsClass.classifyInstance(n);
+                    //isBig = c1==1;
+                    double c2 = featuresClass.classifyInstance(f);
+                    //The classifiers agree
+                    boolean isBig = false;
+                    if (c1 == c2) {
+                        isBig = c1 == 1;
+                        //System.out.println("The classifiers agree " + c1);
+                    } else {
+
+                        double[] d1 = ngramsClass.distributionForInstance(n);
+                        //System.out.println("d1 " + d1[0] + " " + d1[1]);
+                        double[] d2 = featuresClass.distributionForInstance(f);
+                        //System.out.println("d2 " + d2[0] + " " + d2[1]);
+                        if (Math.abs(d1[0] - d1[1]) + 0.05 > Math.abs(d2[0] - d2[1]))
+                            isBig = c1 == 1;
+                        else
+                            isBig = c2 == 1;
+                    }
+                    index++;
+                    long d = System.currentTimeMillis() - start;
+                    duration+=d;
+                    long averageDuration = duration/index;
+                    System.out.println("duration "+d);
+                    System.out.println("average duration "+averageDuration);
+                    if (!isBig)
+                        return;
+
                     if (page != null) {
                         String pageHost = page.getHost();
                         imageHost = pageHost;
@@ -176,6 +243,8 @@ public class ProcessingService {
                     //ignore
                 } catch (InterruptedException ie) {
                     //ignore
+                } catch (Exception e) {
+
                 }
 
             }
@@ -392,7 +461,7 @@ public class ProcessingService {
                     } else {
                         //remove slash at the end of the host name
                         String host = baseUrl.getHost().substring(0, baseUrl.getHost().length());
-                        url = new URL(baseUrl.getProtocol() + "://" + host + (imageUrl.startsWith("/")?"":"/")+ imageUrl);
+                        url = new URL(baseUrl.getProtocol() + "://" + host + (imageUrl.startsWith("/") ? "" : "/") + imageUrl);
                     }
                     imageUrl = url.toString();
                     success = true;
@@ -521,5 +590,160 @@ public class ProcessingService {
             } else {
             }
         }*/
+    }
+
+    private double[] getFeatureVector(CrawledImage i) {
+
+        int index = 0;
+        double[] featureVector = new double[23];
+        String imUrl = i.normalizedSrc;
+        //System.out.println(i.normalizedSrc);
+        String imName = FeaturesArffCreator.getImageName(i.normalizedSrc);
+        String suffix = FeaturesArffCreator.getSuffix(imName);
+        //System.out.println(suffix);
+
+        featureVector[index] = "jpeg".equals(suffix) ? 1 : 0;
+        index++;
+        featureVector[index] = "png".equals(suffix) ? 1 : 0;
+        index++;
+        featureVector[index] = "bmp".equals(suffix) ? 1 : 0;
+        index++;
+        featureVector[index] = "gif".equals(suffix) ? 1 : 0;
+        index++;
+        featureVector[index] = "tiff".equals(suffix) ? 1 : 0;
+        index++;
+        featureVector[index] = i.domDepth;
+        index++;
+        featureVector[index] = i.domSib;
+        index++;
+
+
+        //estimated dimensions from url
+        int[] dims = new int[2];
+        try {
+            dims = FeaturesArffCreator.extractNumeric(i.normalizedSrc);
+        }catch(NumberFormatException e){
+            System.out.println("NumberFormatException caught");
+        }
+        featureVector[index] = dims[0] > 0 ? 1 : 0;
+        index++;
+        featureVector[index] = dims[0];
+        index++;
+        featureVector[index] = dims[1] > 0 ? 1 : 0;
+        index++;
+        featureVector[index] = dims[1];
+        index++;
+
+        try {
+            URL page = new URL(imUrl);
+            String imHost = page.getHost();
+            page = new URL(i.pageUrl);
+            String pageHost = page.getHost();
+            featureVector[index] = imHost.equalsIgnoreCase(pageHost) ? 1 : 0;
+            index++;
+        } catch (MalformedURLException ex) {
+            System.out.println(ex);
+            featureVector[index] = 0;
+            index++;
+        }
+
+        featureVector[index] = "img".equals(i.domElem) ? 1 : 0;
+        index++;
+        featureVector[index] = "link".equals(i.domElem) ? 1 : 0;
+        index++;
+        featureVector[index] = "a".equals(i.domElem) ? 1 : 0;
+        index++;
+        featureVector[index] = "embed".equals(i.domElem) ? 1 : 0;
+        index++;
+        featureVector[index] = "iframe".equals(i.domElem) ? 1 : 0;
+        index++;
+        featureVector[index] = "object".equals(i.domElem) ? 1 : 0;
+        index++;
+
+
+        if (StringUtils.isEmpty(i.alt)) {
+            featureVector[index] = 0;
+            index++;
+            featureVector[index] = 0;
+            index++;
+        } else {
+            featureVector[index] = 1;
+            index++;
+            featureVector[index] = i.alt.length();
+            index++;
+        }
+        if (StringUtils.isEmpty(i.parentTxt)) {
+            featureVector[index] = 0;
+            index++;
+            featureVector[index] = 0;
+            index++;
+        } else {
+            featureVector[index] = 1;
+            index++;
+            featureVector[index] = i.parentTxt.length();
+            index++;
+        }
+
+        featureVector[index] = i.normalizedSrc.length();
+        return featureVector;
+    }
+
+    private Instances createFeatureData() {
+        ArrayList<Attribute> attributes = new ArrayList<Attribute>();
+        attributes.add(new Attribute("suffix_JEPG"));
+        attributes.add(new Attribute("suffix_PNG"));
+        attributes.add(new Attribute("suffix_BMP"));
+        attributes.add(new Attribute("suffix_GIF"));
+        attributes.add(new Attribute("suffix_TIFF"));
+        attributes.add(new Attribute("domDepth"));
+        attributes.add(new Attribute("domSiblings"));
+        attributes.add(new Attribute("hasWidth"));
+        attributes.add(new Attribute("width"));
+        attributes.add(new Attribute("hasHeight"));
+        attributes.add(new Attribute("height"));
+        attributes.add(new Attribute("samedomain"));
+        attributes.add(new Attribute("domElement_IMG"));
+        attributes.add(new Attribute("domElement_LINK"));
+        attributes.add(new Attribute("domElement_A"));
+        attributes.add(new Attribute("domElement_EMBED"));
+        attributes.add(new Attribute("domElement_IFRAME"));
+        attributes.add(new Attribute("domElement_OBJECT"));
+        attributes.add(new Attribute("hasAltText"));
+        attributes.add(new Attribute("altTextLength"));
+        attributes.add(new Attribute("hasParentText"));
+        attributes.add(new Attribute("parentTextLength"));
+        attributes.add(new Attribute("urlLength"));
+        ArrayList fvClassVal = new ArrayList<String>(2);
+        fvClassVal.add("SMALL");
+        fvClassVal.add("BIG");
+        Attribute classAttribute = new Attribute("class", fvClassVal);
+        attributes.add(classAttribute);
+        Instances data = new Instances("New instance", attributes, 10*1000*1000);
+        data.setClassIndex(23);
+        return data;
+    }
+
+    private double[] getngramvec(CrawledImage i) {
+        boolean[] ngramVector = ngramsExtractor.getNGramVector(i);
+        double[] sparseVector = new double[ngramVector.length];
+        for (int k = 0; k < ngramVector.length; k++)
+            sparseVector[k] = ngramVector[k] ? 1 : 0;
+        return sparseVector;
+    }
+
+    private Instances createNGramData() throws Exception {
+        ArrayList<Attribute> attributes = new ArrayList<Attribute>();
+        for (int i = 0; i < 2000; i++) {
+            attributes.add(new Attribute("ngram" + i));
+        }
+        ArrayList fvClassVal = new ArrayList<String>(2);
+        fvClassVal.add("SMALL");
+        fvClassVal.add("BIG");
+        Attribute classAttribute = new Attribute("class", fvClassVal);
+        attributes.add(classAttribute);
+        // predict instance class values
+        Instances data = new Instances("New instance", attributes, 10*1000*1000);
+        data.setClassIndex(2000);
+        return data;
     }
 }

@@ -1,5 +1,7 @@
 package org.commoncrawl.mklab.ngrams;
 
+import com.google.common.primitives.Booleans;
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.lucene.analysis.ngram.NGramTokenizer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.commoncrawl.mklab.analysis.CrawledImage;
@@ -23,6 +25,7 @@ public class ScoreNgramArffCreator extends IArffCreator {
     private final int NUM_NGRAMS;
     private final String[] NGRAMS;
     private final String NGRAMS_FILE;
+    private static int yyy = 0;
 
 
     public ScoreNgramArffCreator(String filename, int numNgrams, String ngramsFile) throws IOException {
@@ -53,12 +56,17 @@ public class ScoreNgramArffCreator extends IArffCreator {
     public void writeFeatureVector(CrawledImage c, boolean isBig) throws IOException {
         boolean[] ngramVector = getNGramVector(c);
 
+        if (!Booleans.contains(ngramVector, true)) {
+            yyy++;
+            System.out.println("The array is empty "+yyy);
+            return;
+        }
         bw.write("{");
         for (int i = 0; i < ngramVector.length; i++) {
             if (ngramVector[i])
                 bw.write(i + " " + 1 + ", ");
         }
-        bw.write(String.valueOf(ngramVector.length)+" " + (isBig ? "BIG" : "SMALL") + "}");
+        bw.write(String.valueOf(ngramVector.length) + " " + (isBig ? "BIG" : "SMALL") + "}");
         bw.newLine();
     }
 
@@ -116,7 +124,7 @@ public class ScoreNgramArffCreator extends IArffCreator {
 
                 while (gramTokenizer.incrementToken()) {
                     String token = charTermAttribute.toString();
-                    ngrams.add(token);
+                    ngrams.add(token.toLowerCase());
                 }
 
                 gramTokenizer.end();

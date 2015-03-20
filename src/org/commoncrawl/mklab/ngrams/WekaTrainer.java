@@ -17,13 +17,13 @@ public class WekaTrainer {
 
     public static void main(String[] args) throws Exception{
         WekaTrainer t = new WekaTrainer();
-        t.test();
+        t.train();
     }
 
     public void train() throws Exception{
         System.out.println("Starting");
         //ConverterUtils.DataSource source = new ConverterUtils.DataSource("/home/kandreadou/Documents/commoncrawlstuff/ngrams_tfidf_test_1000.arff");
-        ConverterUtils.DataSource source = new ConverterUtils.DataSource("/home/iti-310/classification/ngrams_tfidf_train_2000.arff");
+        ConverterUtils.DataSource source = new ConverterUtils.DataSource("/home/iti-310/classification/train_2000.arff");
         Instances structure = source.getDataSet();
         //ArffLoader loader = new ArffLoader();
         //loader.setFile(new File("/home/kandreadou/Documents/commoncrawlstuff/features_train.arff"));
@@ -34,7 +34,7 @@ public class WekaTrainer {
         rf.setMaxDepth(0);
         rf.setNumExecutionSlots(8);
         rf.setNumFeatures(0);
-        rf.setNumTrees(100);
+        rf.setNumTrees(30);
         rf.setPrintTrees(false);
         rf.setSeed(1);
         rf.setDebug(false);
@@ -42,18 +42,18 @@ public class WekaTrainer {
         rf.buildClassifier(structure);
         System.out.println("After build");
         //weka.core.SerializationHelper.write("/home/kandreadou/Documents/commoncrawlstuff/models/tfidf_1000_10trees.model", rf);
-        weka.core.SerializationHelper.write("/home/iti-310/classification/tfidf_2000_100trees.model", rf);
+        weka.core.SerializationHelper.write("/home/iti-310/classification/2000_30trees.model", rf);
     }
 
     public void test() throws Exception {
 
-        FileInputStream fis = new FileInputStream("/home/kandreadou/Documents/commoncrawlstuff/models/tfidf_2000_100trees.model");
+        FileInputStream fis = new FileInputStream("/home/kandreadou/Documents/commoncrawlstuff/new/1000_30trees.model");
         ObjectInputStream ois = new ObjectInputStream(fis);
 
         RandomForest  rf = (RandomForest) ois.readObject();
         ois.close();
 
-        ConverterUtils.DataSource source = new ConverterUtils.DataSource("/home/kandreadou/Documents/commoncrawlstuff/ngrams_tfidf_test_2000.arff");
+        ConverterUtils.DataSource source = new ConverterUtils.DataSource("/home/kandreadou/Documents/commoncrawlstuff/new/test_1000.arff");
         Instances structure = source.getDataSet();
         structure.setClassIndex(structure.numAttributes() - 1);
 
